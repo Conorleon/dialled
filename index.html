@@ -2354,7 +2354,7 @@ async function sbFetch(path, opts={}) {
       apikey: SB_KEY,
       Authorization: `Bearer ${SB_KEY}`,
       'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates',
+      'Prefer': 'return=minimal,resolution=merge-duplicates',
       ...(opts.headers||{})
     }
   });
@@ -2362,21 +2362,35 @@ async function sbFetch(path, opts={}) {
     const txt = await r.text();
     throw new Error(`${r.status}: ${txt}`);
   }
-  return r.status === 204 ? null : r.json();
+  const ct = r.headers.get('content-type') || '';
+  if (r.status === 204 || !ct.includes('json')) return null;
+  return r.json();
 }
 
 async function lbPush() {
   if (!LB.username || !LB.boardId) return;
   const stats = lbMyStats();
-  await sbFetch('leaderboard?on_conflict=username', {
-    method: 'POST',
-    body: JSON.stringify(stats)
-  });
+  // Try upsert first, fall back to update if exists
+  try {
+    await sbFetch('leaderboard', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(stats)
+    });
+  } catch(e) {
+    // If insert fails, try update
+    await sbFetch(`leaderboard?username=eq.${encodeURIComponent(LB.username)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(stats)
+    });
+  }
 }
 
 async function lbFetch() {
-  const data = await sbFetch(`leaderboard?board_id=eq.${encodeURIComponent(LB.boardId)}&order=gamerscore.desc`);
-  return data || [];
+  const data = await sbFetch(`leaderboard?board_id=eq.${encodeURIComponent(LB.boardId)}&order=gamerscore.desc`, {
+    headers: { 'Prefer': 'return=representation' }
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 function lbSetStatus(state) {
@@ -2405,6 +2419,14 @@ async function lbRefresh() {
   } catch(e) {
     console.error('lbRefresh:', e);
     lbSetStatus('offline');
+    // Show error visibly on screen
+    const el = document.getElementById('lb-board-content');
+    if (el) el.innerHTML = `<div class="card" style="border-color:var(--red)">
+      <div style="font-weight:700;color:var(--red);margin-bottom:8px">Connection Error</div>
+      <div style="font-size:13px;color:var(--text2);word-break:break-all">${e.message}</div>
+    </div>`;
+    document.getElementById('lb-loading').style.display = 'none';
+    document.getElementById('lb-board-content').style.display = 'block';
   }
 }
 
