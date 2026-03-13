@@ -942,6 +942,9 @@
           </div>
         </div>
 
+        <!-- Weekly Winner -->
+        <div id="lb-winner-card" style="margin-bottom:20px"></div>
+
         <!-- Tabs -->
         <div class="tab-bar" style="margin-bottom:20px">
           <button class="tab-btn active" id="lb-tab-gs" onclick="lbSetTab('gs')">🏆 Gamerscore</button>
@@ -2442,6 +2445,7 @@ function lbStopPolling() {
 function lbRenderBoard(entries) {
   const el = document.getElementById('lb-board-content');
   if (!el) return;
+  lbRenderWinner(entries);
   if (lbCurrentTab === 'h2h') { lbRenderH2H(entries); return; }
   if (!entries || !entries.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">No one on this board yet</div><div class="empty-text">Be the first to push your stats!</div></div>';
@@ -2553,14 +2557,73 @@ async function lbJoin() {
   lbStartPolling();
 }
 
-function lbLeave() {
+async function lbLeave() {
   if (!confirm('Leave this leaderboard? Your local data is safe.')) return;
   lbStopPolling();
+  // Delete from Supabase
+  try {
+    await sbFetch(`leaderboard?username=eq.${encodeURIComponent(LB.username)}`, {
+      method: 'DELETE'
+    });
+  } catch(e) { console.warn('Could not remove from leaderboard:', e); }
   ['lb_username','lb_board_id'].forEach(k => localStorage.removeItem(k));
   document.getElementById('lb-setup-card').style.display = 'block';
   document.getElementById('lb-main').style.display = 'none';
   lbSetStatus('offline');
   lbGenerateId();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+// WEEKLY WINNER
+// ═══════════════════════════════════════════════════════════════════
+function lbRenderWinner(entries) {
+  const el = document.getElementById('lb-winner-card');
+  if (!el || !entries || entries.length === 0) return;
+
+  // Get start of current week (Monday)
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+  monday.setHours(0, 0, 0, 0);
+
+  // Find top performer this week by gamerscore
+  const thisWeek = entries.filter(p => p.updated_at && new Date(p.updated_at) >= monday);
+  const pool = thisWeek.length > 0 ? thisWeek : entries;
+  const winner = [...pool].sort((a, b) => (b.gamerscore || 0) - (a.gamerscore || 0))[0];
+  if (!winner) return;
+
+  const vol = (winner.volume || 0) >= 1000 ? ((winner.volume || 0) / 1000).toFixed(1) + 'k' : (winner.volume || 0);
+  const isMe = winner.username.toLowerCase() === LB.username.toLowerCase();
+
+  const weekStr = monday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  el.innerHTML = `
+    <div style="background:rgba(232,255,71,.04);border:1px solid rgba(232,255,71,.3);border-radius:12px;padding:20px;text-align:center">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:10px">Week of ${weekStr}</div>
+      <div style="font-size:36px;margin-bottom:6px">👑</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:${isMe ? 'var(--accent)' : 'var(--text)'};letter-spacing:1px">${winner.username}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:2px">${isMe ? "That's you! Keep it up 💪" : "This week's top performer"}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px">
+          <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent)">${winner.gamerscore || 0}G</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Score</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px">
+          <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent3)">${winner.sessions || 0}</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Sessions</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px">
+          <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--accent2)">${vol}</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px">Volume</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px">
+          <div style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--purple)">${winner.prs || 0}</div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px">PRs</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════
