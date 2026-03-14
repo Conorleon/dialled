@@ -1687,11 +1687,11 @@ function initLogPage() {
 
 function renderSplitTabs() {
   const container = document.getElementById('split-tabs');
-  const splits = [...Object.keys(EXERCISE_LIBRARY), 'Custom'];
+  const splits = getSplits();
   container.innerHTML = splits.map(s =>
-    `<button class="split-tab-btn" data-split="${s}" onclick="selectSplit('${s}')"
+    `<button class="split-tab-btn" data-split="${s.name}" onclick="selectSplit('${s.name}')"
       style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all 0.15s">
-      ${SPLIT_ICONS[s]} ${s}
+      ${s.icon} ${s.name}
     </button>`).join('');
 }
 
@@ -1708,12 +1708,7 @@ function selectSplit(split) {
   });
   const exercises = DB.exercises;
   let splitExercises;
-  if (split === 'Custom') {
-    const libraryNames = Object.values(EXERCISE_LIBRARY).flat();
-    splitExercises = exercises.filter(e => !libraryNames.includes(e.name) || e.category === 'Custom');
-  } else {
-    splitExercises = exercises.filter(e => e.category === split);
-  }
+  splitExercises = exercises.filter(e => e.category === split);
   const grid = document.getElementById('exercise-picker-grid');
   document.getElementById('exercise-picker-group').style.display = 'block';
   if (splitExercises.length === 0) {
@@ -1967,6 +1962,9 @@ function saveExercise() {
   DB.exercises = exercises;
   closeExerciseModal();
   renderExercises();
+  renderSplitTabs(); // refresh log page split tabs
+  populateSplitSelects(); // refresh all dropdowns
+  haptic('success');
 }
 
 let activeExSplit = 'Arms';
@@ -3140,40 +3138,41 @@ function lbRenderBoard(entries) {
   lbRenderWinner(entries);
   if (lbCurrentTab === 'h2h') { lbRenderH2H(entries); return; }
   if (lbCurrentTab === 'chat') { lbLoadChat(); return; }
+
   if (!entries || !entries.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">No one on this board yet</div><div class="empty-text">Be the first to push your stats!</div></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">No one on this board yet</div><div class="empty-text">Push your stats to be first!</div></div>';
     return;
   }
+
   const sortKey = { gs:'gamerscore', vol:'volume', sess:'sessions', prs:'prs' }[lbCurrentTab] || 'gamerscore';
   const sorted = [...entries].sort((a,b) => (b[sortKey]||0) - (a[sortKey]||0));
   const medals = ['🥇','🥈','🥉'];
   const me = LB.username.toLowerCase();
-  const rows = sorted.map((p, i) => {
+
+  const cards = sorted.map((p, i) => {
     const isMe = p.username.toLowerCase() === me;
+    const isLeader = i === 0;
     const vol = (p.volume||0) >= 1000 ? ((p.volume||0)/1000).toFixed(1)+'k' : (p.volume||0);
-    const updated = p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
-    return `<tr style="${isMe?'background:rgba(232,255,71,.06);':''}">
-      <td style="font-size:20px;text-align:center;width:44px">${medals[i]||'#'+(i+1)}</td>
-      <td>
-        <div style="font-weight:700;font-size:15px${isMe?';color:var(--accent)':''}">${p.username}${isMe?' <span style="font-size:10px;color:var(--text3)">(you)</span>':''}</div>
-        <div style="font-size:11px;color:var(--text3)">${updated}</div>
-      </td>
-      <td style="font-family:'DM Mono',monospace;font-size:14px;color:var(--accent)">${p.gamerscore||0}G</td>
-      <td style="font-family:'DM Mono',monospace;font-size:14px;color:var(--accent3)">${p.sessions||0}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:14px;color:var(--accent2)">${vol}kg</td>
-      <td style="font-family:'DM Mono',monospace;font-size:14px;color:var(--purple)">${p.prs||0}</td>
-      <td style="text-align:center"><span style="font-size:11px;background:rgba(74,222,128,.1);color:var(--green);border-radius:4px;padding:2px 8px;font-weight:600">${p.achievements||0} achs</span></td>
-    </tr>`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;margin-bottom:8px;background:${isMe?'rgba(232,255,71,.06)':isLeader?'rgba(255,215,0,.04)':'var(--surface2)'};border:1px solid ${isMe?'rgba(232,255,71,.2)':isLeader?'rgba(255,215,0,.2)':'var(--border)'}">
+      <div style="font-size:22px;width:36px;text-align:center;flex-shrink:0">${isLeader?'👑':medals[i]||'#'+(i+1)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:${isMe?'var(--accent)':isLeader?'#ffd700':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.username}${isMe?' <span style="font-size:10px;color:var(--text3)">(you)</span>':''}</div>
+        <div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700">${p.gamerscore||0}G</span>
+          <span style="font-size:12px;color:var(--accent3);font-family:'DM Mono',monospace">${p.sessions||0} ex</span>
+          <span style="font-size:12px;color:var(--accent2);font-family:'DM Mono',monospace">${vol}kg</span>
+          <span style="font-size:12px;color:var(--purple);font-family:'DM Mono',monospace">${p.prs||0} PRs</span>
+        </div>
+      </div>
+    </div>`;
   }).join('');
+
   el.innerHTML = `<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="card-title" style="margin-bottom:0">Board: <span style="color:var(--accent)">${LB.boardId}</span></div>
       <div style="font-size:12px;color:var(--text3)">${sorted.length} player${sorted.length!==1?'s':''}</div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th></th><th>Player</th><th>🏆 Score</th><th>🏋️ Exercises</th><th>🔥 Volume</th><th>🎯 PRs</th><th>Achs</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
+    ${cards}
   </div>`;
 }
 
@@ -3336,7 +3335,7 @@ async function lbLoadHallOfFame() {
     const entries = Array.isArray(data) ? data : [];
 
     if (!entries.length) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏛️</div><div class="empty-title">No winners yet</div><div class="empty-text">The first weekly winner will be crowned here</div></div>';
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">🏛️</div><div class="empty-title">No weekly winners yet</div><div class="empty-text">The board crowns a weekly champion every Monday</div></div>';
       return;
     }
 
@@ -3377,7 +3376,7 @@ async function lbLoadHallOfFame() {
       </div>`;
     }).join('');
 
-    el.innerHTML = `<div class="card"><div class="card-title" style="margin-bottom:16px">🏛️ Hall of Fame — ${LB.boardId}</div>${rows}</div>`;
+    el.innerHTML = `<div class="card"><div style="text-align:center;margin-bottom:16px"><div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent3);margin-bottom:4px">Weekly Champions</div><div class="card-title" style="margin-bottom:0">🏛️ Hall of Fame</div></div>${rows}</div>`;
   } catch(e) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">📡</div><div class="empty-title">Could not load</div><div class="empty-text">Check your connection and try again</div></div>';
   }
@@ -4303,11 +4302,16 @@ function tplAddExRow() {
   row.id = rowId;
   row.style.cssText = 'margin-bottom:10px';
 
+  const splitNames = splits.map(s => s.name);
   const allOpts = splits.map(s => {
     const exs = exercises.filter(e=>e.category===s.name);
     if (!exs.length) return '';
     return `<optgroup label="${s.icon} ${s.name}">${exs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
-  }).join('');
+  }).join('') + (() => {
+    const customExs = exercises.filter(e => !splitNames.includes(e.category) || e.category === 'Custom');
+    if (!customExs.length) return '';
+    return `<optgroup label="⚙️ Custom">${customExs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
+  })();
 
   row.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 60px 60px 36px;gap:8px;align-items:center">
@@ -4324,13 +4328,15 @@ function tplFilterAllRows(query) {
   query = query.trim().toLowerCase();
   const exercises = DB.exercises;
   const splits = getSplits();
+  const splitNames = splits.map(s => s.name);
   document.querySelectorAll('#tpl-exercises-list select').forEach(sel => {
     if (!query) {
+      const customExs = exercises.filter(e => !splitNames.includes(e.category) || e.category === 'Custom');
       sel.innerHTML = splits.map(s => {
         const exs = exercises.filter(e=>e.category===s.name);
         if (!exs.length) return '';
         return `<optgroup label="${s.icon} ${s.name}">${exs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
-      }).join('');
+      }).join('') + (customExs.length ? `<optgroup label="⚙️ Custom">${customExs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>` : '');
     } else {
       const scored = exercises
         .map(e => ({ e, score: tplFuzzyScore(e.name, query) }))
