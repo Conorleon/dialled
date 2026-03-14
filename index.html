@@ -3318,13 +3318,21 @@ function getMaxGamerScore() {
 function updateAchievementNavBadge() {
   const badge = document.getElementById('achievement-nav-badge');
   if (!badge) return;
-  const n = DB.unlockedAchievements.length;
-  badge.style.display = n > 0 ? 'inline-block' : 'none';
-  badge.textContent = n;
+  const total = DB.unlockedAchievements.length;
+  const seen = parseInt(localStorage.getItem('lb_ach_seen') || '0');
+  const newCount = total - seen;
+  if (newCount > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = newCount;
+  } else {
+    badge.style.display = 'none';
+    badge.textContent = '';
+  }
 }
 
 function renderAchievements() {
-  // Clear the nav badge when user opens achievements
+  // Mark all achievements as seen and clear badge
+  localStorage.setItem('lb_ach_seen', DB.unlockedAchievements.length);
   const badge = document.getElementById('achievement-nav-badge');
   if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
   const unlocked = new Set(DB.unlockedAchievements);
