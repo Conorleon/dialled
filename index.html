@@ -761,7 +761,6 @@
               <label class="form-label">Exercise</label>
               <input type="text" class="form-input" id="log-ex-search" placeholder="🔍 Search exercises..." style="margin-bottom:8px;font-size:13px" oninput="logFilterExercises(this.value)">
               <div id="exercise-picker-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto;padding-right:4px"></div>
-              <button onclick="logQuickAddExercise()" style="margin-top:8px;width:100%;background:none;border:1px dashed var(--border);border-radius:8px;padding:8px;color:var(--text3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text3)'">+ Can't find it? Add a custom exercise</button>
               <input type="hidden" id="log-exercise">
               <div id="selected-exercise-display" style="display:none;margin-top:10px;padding:10px 14px;background:var(--surface3);border:1px solid var(--accent);border-radius:8px;font-weight:600;font-size:14px;color:var(--accent)"></div>
             </div>
@@ -3157,11 +3156,23 @@ function lbRenderBoard(entries) {
       <div style="font-size:22px;width:36px;text-align:center;flex-shrink:0">${isLeader?'👑':medals[i]||'#'+(i+1)}</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:15px;color:${isMe?'var(--accent)':isLeader?'#ffd700':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.username}${isMe?' <span style="font-size:10px;color:var(--text3)">(you)</span>':''}</div>
-        <div style="display:flex;gap:10px;margin-top:5px;flex-wrap:wrap">
-          <span style="font-size:12px;color:var(--accent);font-family:'DM Mono',monospace;font-weight:700">${p.gamerscore||0}G</span>
-          <span style="font-size:12px;color:var(--accent3);font-family:'DM Mono',monospace">${p.sessions||0} ex</span>
-          <span style="font-size:12px;color:var(--accent2);font-family:'DM Mono',monospace">${vol}kg</span>
-          <span style="font-size:12px;color:var(--purple);font-family:'DM Mono',monospace">${p.prs||0} PRs</span>
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <span style="font-size:14px;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent)">${p.gamerscore||0}G</span>
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Score</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <span style="font-size:14px;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent3)">${p.sessions||0}</span>
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Exercises</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <span style="font-size:14px;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent2)">${vol}kg</span>
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Volume</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center">
+            <span style="font-size:14px;font-family:'DM Mono',monospace;font-weight:700;color:var(--purple)">${p.prs||0}</span>
+            <span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">PRs</span>
+          </div>
         </div>
       </div>
     </div>`;
