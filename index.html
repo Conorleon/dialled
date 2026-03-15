@@ -1375,7 +1375,6 @@
           </div>
           <div class="form-group">
             <label class="form-label">Exercises</label>
-            <input type="text" class="form-input" id="tpl-ex-search" placeholder="🔍 Filter exercises..." autocomplete="off" style="margin-bottom:8px;font-size:13px" oninput="tplFilterAllRows(this.value)">
             <div id="tpl-exercises-list" style="margin-bottom:8px"></div>
             <button class="btn btn-secondary btn-sm" onclick="tplAddExRow()">+ Add Exercise</button>
             <div id="tpl-ex-count" style="font-size:12px;color:var(--text3);margin-top:6px"></div>
@@ -5451,40 +5450,57 @@ function tplAddExRow() {
   })();
 
   row.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 60px 60px 36px;gap:8px;align-items:center">
+    <div style="margin-bottom:6px;display:flex;gap:6px;align-items:center">
+      <input type="text" class="form-input tpl-row-search" placeholder="🔍 Search exercise..." autocomplete="off"
+        style="font-size:13px;flex:1" oninput="tplFilterRow(this,'${rowId}')">
+      <button onclick="document.getElementById('${rowId}').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px;flex-shrink:0;touch-action:manipulation" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 60px 60px;gap:8px;align-items:center">
       <select class="form-select" style="font-size:13px" id="${rowId}-sel">${allOpts}</select>
-      <input type="number" class="form-input" placeholder="Sets" min="1" max="20" value="3" style="text-align:center">
-      <input type="number" class="form-input" placeholder="Reps" min="1" max="100" value="10" style="text-align:center">
-      <button onclick="document.getElementById('${rowId}').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">✕</button>
+      <input type="number" class="form-input" placeholder="Sets" min="1" max="20" value="3" inputmode="numeric" style="text-align:center">
+      <input type="number" class="form-input" placeholder="Reps" min="1" max="100" value="10" inputmode="numeric" style="text-align:center">
     </div>`;
   container.appendChild(row);
 }
 
 
-function tplFilterAllRows(query) {
-  query = query.trim().toLowerCase();
+// Per-row search — only filters the select in that specific row
+function tplFilterRow(input, rowId) {
+  const query = input.value.trim();
+  const sel = document.getElementById(rowId + '-sel');
+  if (!sel) return;
+
+  // Save current selection so we can restore it if it still matches
+  const prevVal = sel.value;
+
   const exercises = DB.exercises;
   const splits = getSplits();
   const splitNames = splits.map(s => s.name);
-  document.querySelectorAll('#tpl-exercises-list select').forEach(sel => {
-    if (!query) {
-      const customExs = exercises.filter(e => !splitNames.includes(e.category) || e.category === 'Custom');
-      sel.innerHTML = splits.map(s => {
-        const exs = exercises.filter(e=>e.category===s.name);
-        if (!exs.length) return '';
-        return `<optgroup label="${s.icon} ${s.name}">${exs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
-      }).join('') + (customExs.length ? `<optgroup label="⚙️ Custom">${customExs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>` : '');
-    } else {
-      const scored = exercises
-        .map(e => ({ e, score: tplFuzzyScore(e.name, query) }))
-        .filter(x => x.score > 0)
-        .sort((a,b) => b.score - a.score);
-      sel.innerHTML = scored.length
-        ? scored.map(x=>`<option value="${x.e.id}">${x.e.name}</option>`).join('')
-        : '<option disabled>No results</option>';
-    }
-  });
+
+  if (!query) {
+    // Restore full list grouped by split
+    const customExs = exercises.filter(e => !splitNames.includes(e.category) || e.category === 'Custom');
+    sel.innerHTML = splits.map(s => {
+      const exs = exercises.filter(e => e.category === s.name);
+      if (!exs.length) return '';
+      return `<optgroup label="${s.icon} ${s.name}">${exs.map(e => `<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>`;
+    }).join('') + (customExs.length ? `<optgroup label="⚙️ Custom">${customExs.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}</optgroup>` : '');
+  } else {
+    const scored = exercises
+      .map(e => ({ e, score: tplFuzzyScore(e.name, query) }))
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    sel.innerHTML = scored.length
+      ? scored.map(x => `<option value="${x.e.id}">${x.e.name}</option>`).join('')
+      : '<option disabled>No results</option>';
+  }
+
+  // Restore previous selection if it's still in the list
+  if (prevVal) sel.value = prevVal;
 }
+
+// Keep tplFilterAllRows as a no-op so nothing breaks if called elsewhere
+function tplFilterAllRows(query) {}
 
 function tplFuzzyScore(str, query) {
   // Returns a score — higher is better match
@@ -5536,7 +5552,7 @@ function tplSave() {
   rows.forEach(row => {
     const sel = row.querySelector('select');
     const inputs = row.querySelectorAll('input[type="number"]');
-    if (sel && sel.value) {
+    if (sel && sel.value && sel.value !== '') {
       exercises.push({
         exerciseId: sel.value,
         sets: parseInt(inputs[0]?.value) || 3,
