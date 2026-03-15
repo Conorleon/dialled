@@ -14,16 +14,34 @@
     --text: #f0f0f5; --text2: #8888a0; --text3: #555568;
     --green: #4ade80; --red: #f87171; --purple: #c084fc;
     --radius: 12px; --radius-sm: 8px;
+
+    /* Type scale — use these instead of arbitrary font-size values */
+    --text-xs:   10px;
+    --text-sm:   12px;
+    --text-base: 14px;
+    --text-md:   15px;
+    --text-lg:   18px;
+    --text-xl:   24px;
+    --text-2xl:  32px;
+    --text-3xl:  42px;
+    /* Display sizes (Bebas Neue) */
+    --display-sm: 28px;
+    --display-md: 38px;
+    --display-lg: 48px;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: 'DM Sans', sans-serif;
+    font-size: var(--text-base);
+    line-height: 1.5;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* LAYOUT */
@@ -51,18 +69,19 @@
 
   .logo h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 32px;
-    letter-spacing: 2px;
+    font-size: 34px;
+    letter-spacing: 3px;
     color: var(--accent);
     line-height: 1;
+    text-shadow: 0 0 20px rgba(232,255,71,0.2);
   }
 
   .logo span {
-    font-size: 11px;
+    font-size: var(--text-xs);
     color: var(--text3);
     letter-spacing: 3px;
     text-transform: uppercase;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .nav-item {
@@ -72,14 +91,16 @@
     padding: 11px 24px;
     cursor: pointer;
     color: var(--text2);
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 500;
     transition: all 0.15s;
     border-left: 3px solid transparent;
+    letter-spacing: 0.1px;
   }
 
   .nav-item:hover { color: var(--text); background: var(--surface2); }
-  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(232,255,71,0.05); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(232,255,71,0.06); }
+  .nav-item.active .nav-icon { filter: drop-shadow(0 0 6px rgba(232,255,71,0.4)); }
 
   .nav-icon { font-size: 18px; width: 22px; text-align: center; }
 
@@ -102,12 +123,12 @@
 
   .page-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 42px;
+    font-size: var(--text-3xl);
     letter-spacing: 2px;
     line-height: 1;
   }
 
-  .page-subtitle { color: var(--text2); font-size: 14px; margin-top: 4px; }
+  .page-subtitle { color: var(--text2); font-size: var(--text-sm); margin-top: 4px; letter-spacing: 0.2px; }
 
   /* BUTTONS */
   .btn {
@@ -116,21 +137,34 @@
     border: none;
     cursor: pointer;
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+    font-size: var(--text-base);
     font-weight: 600;
-    transition: all 0.15s;
+    transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), background 0.15s, box-shadow 0.15s, opacity 0.15s;
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: 0.2px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
   }
 
-  .btn-primary { background: var(--accent); color: #0a0a0b; }
-  .btn-primary:hover { background: #d4eb3a; transform: translateY(-1px); }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:hover:not(:disabled) { background: #d4eb3a; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,255,71,0.3); }
   .btn-secondary { background: var(--surface3); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { background: var(--border); }
-  .btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
-  .btn-danger:hover { background: rgba(248,113,113,0.25); }
-  .btn-sm { padding: 6px 14px; font-size: 13px; }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); border-color: var(--text3); }
+  .btn-danger { background: rgba(248,113,113,0.12); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .btn-danger:hover:not(:disabled) { background: rgba(248,113,113,0.22); border-color: rgba(248,113,113,0.5); }
+  .btn-sm { padding: 6px 14px; font-size: var(--text-sm); }
 
   /* CARDS */
   .card {
@@ -138,11 +172,26 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 24px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+
+  /* Card entrance stagger on page load */
+  .page.active .card {
+    animation: cardEntrance 0.25s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .page.active .card:nth-child(1) { animation-delay: 0.03s; }
+  .page.active .card:nth-child(2) { animation-delay: 0.06s; }
+  .page.active .card:nth-child(3) { animation-delay: 0.09s; }
+  .page.active .card:nth-child(4) { animation-delay: 0.12s; }
+  @keyframes cardEntrance {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .card-title {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-xs);
+    font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--text3);
@@ -153,36 +202,60 @@
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  /* stat-cards override — always 3 columns so 6 cards sit in clean 3×2 */
+  #stat-cards { grid-template-columns: repeat(3, 1fr); gap: 14px; }
 
   /* STAT CARDS */
   .stat-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px 24px;
+    padding: 18px 20px 16px;
     position: relative;
     overflow: hidden;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    cursor: default;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   }
 
   .stat-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 2px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
   }
 
+  .stat-card.yellow { border-color: rgba(232,255,71,0.2); }
   .stat-card.yellow::before { background: var(--accent); }
+  .stat-card.yellow:hover { border-color: rgba(232,255,71,0.4); }
+  .stat-card.orange { border-color: rgba(255,107,53,0.2); }
   .stat-card.orange::before { background: var(--accent2); }
+  .stat-card.orange:hover { border-color: rgba(255,107,53,0.4); }
+  .stat-card.blue { border-color: rgba(71,194,255,0.2); }
   .stat-card.blue::before { background: var(--accent3); }
+  .stat-card.blue:hover { border-color: rgba(71,194,255,0.4); }
+  .stat-card.green { border-color: rgba(74,222,128,0.2); }
   .stat-card.green::before { background: var(--green); }
+  .stat-card.green:hover { border-color: rgba(74,222,128,0.4); }
+  .stat-card.purple { border-color: rgba(192,132,252,0.2); }
+  .stat-card.purple::before { background: var(--purple); }
+  .stat-card.purple:hover { border-color: rgba(192,132,252,0.4); }
 
-  .stat-label { font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
-  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 40px; line-height: 1.1; margin: 6px 0 4px; color: var(--text); }
-  .stat-sub { font-size: 12px; color: var(--text2); }
+  .stat-label { font-size: var(--text-xs); color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1.1; margin: 4px 0 2px; color: var(--text); }
+  .stat-sub { font-size: var(--text-xs); color: var(--text2); line-height: 1.4; }
+
+  /* pulse animation for stat value updates */
+  @keyframes stat-pulse { 0%,100% { opacity:1; } 40% { opacity:0.4; } }
+  .stat-pulse { animation: stat-pulse 0.4s ease; }
 
   /* FORMS */
   .form-group { margin-bottom: 16px; }
-  .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; }
+  .form-label { display: block; font-size: var(--text-sm); font-weight: 600; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
 
   .form-textarea {
     width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);
@@ -217,7 +290,7 @@
   .split-icon-btn:hover { border-color:var(--accent); }
 
   .chart-container-lg { position:relative;height:280px; }
-    .form-input, .form-select {
+  .form-input, .form-select {
     width: 100%;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -225,24 +298,38 @@
     padding: 10px 14px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    transition: border-color 0.15s;
+    font-size: var(--text-base);
+    transition: border-color 0.15s, box-shadow 0.15s;
     outline: none;
     appearance: none;
+    -webkit-appearance: none;
   }
-
-  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(232,255,71,0.1);
+  }
   .form-input::placeholder { color: var(--text3); }
+  .form-input:hover:not(:focus), .form-select:hover:not(:focus) { border-color: var(--text3); }
 
   .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
   /* TABLES */
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th { text-align: left; padding: 10px 16px; font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); }
-  td { padding: 12px 16px; border-bottom: 1px solid rgba(42,42,53,0.6); vertical-align: middle; }
+  th { text-align: left; padding: 10px 16px; font-size: 11px; color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid rgba(42,42,53,0.4); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: var(--surface2); }
+  /* Reveal action buttons on row hover */
+  .row-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+  tr:hover .row-actions { opacity: 1; }
+  @media (max-width: 768px) { .row-actions { opacity: 1; } }
+  /* Sticky date column on mobile */
+  @media (max-width: 600px) {
+    .table-wrap { font-size: 13px; }
+    td:first-child, th:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+    tr:hover td:first-child { background: var(--surface2); }
+  }
 
   /* BADGES */
   .badge {
@@ -251,8 +338,9 @@
     gap: 5px;
     padding: 3px 10px;
     border-radius: 100px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    letter-spacing: 0.3px;
   }
 
   .badge-green { background: rgba(74,222,128,0.15); color: var(--green); }
@@ -305,6 +393,7 @@
   }
 
   .exercise-pill:hover { border-color: var(--accent); background: rgba(232,255,71,0.04); }
+  .exercise-pill:active { transform: scale(0.98); }
   .exercise-pill-name { font-weight: 600; font-size: 15px; }
   .exercise-pill-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
@@ -329,8 +418,9 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
-    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -338,7 +428,7 @@
     padding: 20px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.18s ease;
   }
 
   .modal-overlay.open { opacity: 1; pointer-events: all; }
@@ -350,11 +440,12 @@
     padding: 28px;
     width: 100%;
     max-width: 480px;
-    transform: translateY(20px);
-    transition: transform 0.2s;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
   }
 
-  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
 
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 1px; }
@@ -393,6 +484,13 @@
 
   /* Smooth scroll on mobile */
   .main { -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+
+  /* Custom scrollbar for WebKit (dark mode only) */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+  body.light ::-webkit-scrollbar-thumb { background: var(--border); }
 
   /* EMPTY STATE */
   .empty-state {
@@ -453,13 +551,60 @@
 
   .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
+  /* ── IMPROVED SPLIT TABS ── */
+  .split-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 100px;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    transition: all 0.18s cubic-bezier(0.22,1,0.36,1);
+    touch-action: manipulation; user-select: none;
+  }
+  .split-pill:hover { border-color: var(--text2); color: var(--text); }
+  .split-pill.active {
+    background: var(--accent); color: #0a0a0b;
+    border-color: var(--accent);
+    box-shadow: 0 2px 12px rgba(232,255,71,0.25);
+  }
+  .split-pill .pill-icon { font-size: 15px; line-height: 1; }
+
+  /* ── EXERCISE PICKER ANIMATION ── */
+  #exercise-picker-group { transition: opacity 0.2s, transform 0.2s cubic-bezier(0.22,1,0.36,1); }
+  #exercise-picker-group.entering { animation: pickerIn 0.2s cubic-bezier(0.22,1,0.36,1); }
+  @keyframes pickerIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── IMPROVED SET ROWS ── */
+  .set-row {
+    display: grid; grid-template-columns: 32px 1fr 1fr 36px;
+    gap: 8px; align-items: center; margin-bottom: 8px;
+    padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    transition: border-color 0.15s;
+  }
+  .set-row:focus-within { border-color: rgba(232,255,71,0.4); }
+  .set-row-num {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--text3); text-align: center; font-weight: 700;
+  }
+  .set-input-wrap { position: relative; }
+  .set-input-label {
+    position: absolute; top: -8px; left: 8px;
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text3);
+    background: var(--surface2); padding: 0 3px;
+    pointer-events: none;
+  }
+
   /* SECTION LABEL */
   .section-label {
-    font-size: 11px;
+    font-size: var(--text-xs);
     color: var(--text3);
     letter-spacing: 2px;
     text-transform: uppercase;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 12px;
   }
 
@@ -488,15 +633,49 @@
   }
 
   /* MOBILE */
+  /* BOTTOM TAB BAR */
+  #bottom-tab-bar {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 300;
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  #bottom-tab-bar { display: none; grid-template-columns: repeat(5, 1fr); }
+  .btab {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px; padding: 6px 4px; border: none; background: none;
+    cursor: pointer; color: var(--text3);
+    font-family: 'DM Sans', sans-serif;
+    transition: color 0.15s, transform 0.15s;
+    touch-action: manipulation; border-radius: 8px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btab:active { transform: scale(0.9); }
+  .btab.active { color: var(--accent); }
+  .btab-icon { font-size: 20px; line-height: 1; }
+  .btab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
   @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
-    .main { margin-left: 0; max-width: 100vw; padding: 20px 16px; padding-top: 60px; }
+    .main { margin-left: 0; max-width: 100vw; padding: 20px 16px; padding-top: 60px; padding-bottom: 80px; }
     .sidebar-toggle { display: block; }
     .logo { padding-top: 56px; }
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    #stat-cards { grid-template-columns: repeat(2, 1fr); }
     .form-row { grid-template-columns: 1fr 1fr; }
     .page-title { font-size: 32px; }
+    #bottom-tab-bar { display: grid; }
+    /* Hide sidebar toggle on mobile since we have bottom tabs */
+    .sidebar-toggle { display: none; }
+    /* Rest timer and achievement toast need to clear the tab bar */
+    .rest-timer { bottom: 90px; }
+    #achievement-toast { bottom: 90px; }
+    #app-toast { bottom: 90px; }
   }
 
 
@@ -541,7 +720,7 @@
 #achievement-toast { position:fixed; bottom:28px; right:28px; z-index:9999; pointer-events:none; width:360px; }
 #achievement-toast.hidden { display:none; }
 .toast-inner {
-  background: linear-gradient(135deg, #0d1117 0%, #161b22 60%, #1a1f2a 100%);
+  background: var(--surface);
   border-radius: 6px;
   overflow: hidden;
   position: relative;
@@ -550,7 +729,7 @@
 .toast-inner.toast-diamond { border: 1px solid #7dd3fc; animation: xbox-slide-in .55s cubic-bezier(.22,.68,0,1.2) forwards, diamond-glow-pop 1.4s ease 0.3s; }
 .toast-inner.sliding-out { animation: xbox-slide-out .4s ease forwards; }
 .toast-top-bar { height: 3px; }
-.toast-top-bar.normal-bar { background: linear-gradient(90deg, #9aef3c, #e8ff47, #ff6b35); }
+.toast-top-bar.normal-bar { background: linear-gradient(90deg, var(--green), var(--accent), var(--accent2)); }
 .toast-top-bar.diamond-bar { background: linear-gradient(90deg, #7dd3fc, #e0f2fe, #38bdf8, #e0f2fe, #7dd3fc); background-size: 300% 100%; animation: shimmer 2s linear infinite; }
 .toast-body { padding: 14px 16px; display: flex; gap: 14px; align-items: center; }
 .toast-icon-wrap { width: 52px; height: 52px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 28px; position: relative; }
@@ -562,23 +741,28 @@
 .toast-label.normal-label { color: #9aef3c; }
 .toast-label.diamond-label { background: linear-gradient(90deg, #7dd3fc, #e0f2fe, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 #toast-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1.5px; line-height: 1; color: #f0f0f5; }
-#toast-desc { font-size: 11px; color: #6b7280; margin-top: 3px; line-height: 1.3; }
+#toast-desc { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.3; }
 .toast-score { flex-shrink: 0; text-align: center; }
 .toast-score-val { font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1; }
 .toast-score-val.normal-score { color: #e8ff47; }
 .toast-score-val.diamond-score { background: linear-gradient(135deg, #7dd3fc, #e0f2fe, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.toast-score-g { font-size: 11px; color: #6b7280; margin-top: 1px; letter-spacing: 1px; font-weight: 700; }
+.toast-score-g { font-size: 11px; color: var(--text2); margin-top: 1px; letter-spacing: 1px; font-weight: 700; }
 /* Confetti particles */
 .confetti-wrap { position:absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; overflow:hidden; }
 .confetti-p { position:absolute; width:6px; height:6px; border-radius:1px; animation: confetti-fall .9s ease forwards; }
 
 
   body.light {
-    --bg: #f4f4f5; --surface: #ffffff; --surface2: #f0f0f3; --surface3: #e4e4e9;
-    --border: #d4d4dc; --text: #111118; --text2: #555570; --text3: #9999b0;
-    --accent: #6b8f00; --accent2: #e05500; --accent3: #0088cc;
+    --bg: #f2f2f4; --surface: #ffffff; --surface2: #eeeef2; --surface3: #e2e2e8;
+    --border: #d0d0da; --text: #111118; --text2: #50507a; --text3: #9595b5;
+    --accent: #5a7a00; --accent2: #d44d00; --accent3: #0077bb;
     --green: #16a34a; --red: #dc2626; --purple: #7c3aed;
   }
+  /* Light mode adjustments */
+  body.light .logo h1 { text-shadow: none; }
+  body.light .nav-item.active .nav-icon { filter: none; }
+  body.light .stat-card { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  body.light .btn-primary:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(90,122,0,0.25); }
   /* ── THEME TOGGLE ── */
   /* ── IN-APP TOAST (replaces alert) ── */
   #app-toast {
@@ -770,11 +954,35 @@
         <div class="stat-card purple" style="position:relative"><div class="stat-label">Gamerscore</div><div class="stat-value" id="stat-gs">0G</div><div class="stat-sub" id="stat-gs-sub">0 achievements</div><span id="egg-gs-lh" style="position:absolute;bottom:6px;right:8px;font-size:9px;color:transparent;font-weight:800;letter-spacing:1px;transition:color .3s;font-family:'DM Mono',monospace" onmouseenter="this.style.color='rgba(192,132,252,0.4)'" onmouseleave="this.style.color='transparent'">LH</span></div>
       </div>
 
+      <!-- Weekly summary -->
+      <div class="card mt-24" id="weekly-summary-card" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">This Week</div>
+          <span id="weekly-summary-dates" style="font-size:12px;color:var(--text3)"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+          <div style="text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent)" id="wsum-days">0</div>
+            <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase">Sessions</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--accent3)" id="wsum-vol">0</div>
+            <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase">kg lifted</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:32px" id="wsum-vs" style="color:var(--text2)">—</div>
+            <div style="font-size:11px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase">vs last week</div>
+          </div>
+        </div>
+        <!-- 7-day sparkline -->
+        <div id="wsum-sparkline" style="display:flex;align-items:flex-end;gap:3px;height:36px"></div>
+      </div>
+
       <!-- Quick log shortcuts -->
-      <div class="card mt-24" id="quick-log-card" style="display:none">
+      <div class="card mt-16" id="quick-log-card" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <div class="card-title" style="margin-bottom:0">Quick Log</div>
-          <span style="font-size:12px;color:var(--text3)">tap to log</span>
+          <span style="font-size:var(--text-xs);color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-weight:600">tap to log</span>
         </div>
         <div id="quick-log-buttons" style="display:flex;flex-wrap:wrap;gap:8px"></div>
       </div>
@@ -786,7 +994,8 @@
             <div class="empty-state">
               <div class="empty-icon">🏋️</div>
               <div class="empty-title">No workouts yet</div>
-              <div class="empty-text">Log your first workout to get started</div>
+              <div class="empty-text">Ready to get started?</div>
+              <button class="btn btn-primary btn-sm" style="margin-top:16px" onclick="showPage('log')">+ Log First Workout</button>
             </div>
           </div>
         </div>
@@ -1697,6 +1906,10 @@ function showPage(name) {
     const onclick = n.getAttribute('onclick') || '';
     n.classList.toggle('active', onclick.includes("'" + name + "'"));
   });
+  // Sync bottom tab bar
+  document.querySelectorAll('.btab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.page === name);
+  });
   document.getElementById('sidebar')?.classList.remove('open');
   const ov = document.getElementById('sidebar-overlay'); if(ov) ov.style.display='none';
   if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
@@ -1746,19 +1959,26 @@ function renderDashboard() {
 
   // Date
   renderReminders();
+  renderWeeklySummary();
   renderQuickLog();
   document.getElementById('dashboard-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
   // Stats
-  document.getElementById('stat-total').textContent = new Set(workouts.map(w=>w.date)).size;
-  document.getElementById('stat-exercises').textContent = workouts.length;
+  const _setStatVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = String(val);
+    if (el.textContent !== v) { el.textContent = v; el.classList.remove('stat-pulse'); void el.offsetWidth; el.classList.add('stat-pulse'); }
+  };
+  _setStatVal('stat-total', new Set(workouts.map(w=>w.date)).size);
+  _setStatVal('stat-exercises', workouts.length);
 
   const totalVol = workouts.reduce((sum, w) => sum + w.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0);
-  document.getElementById('stat-volume').textContent = totalVol >= 1000 ? (totalVol/1000).toFixed(1) + 'k' : Math.round(totalVol);
+  _setStatVal('stat-volume', totalVol >= 1000 ? (totalVol/1000).toFixed(1) + 'k' : Math.round(totalVol));
 
   // PRs
   const prs = getPRs();
-  document.getElementById('stat-prs').textContent = Object.keys(prs).length;
+  _setStatVal('stat-prs', Object.keys(prs).length);
 
   // Current streak
   const streakEl = document.getElementById('stat-streak');
@@ -1913,9 +2133,8 @@ function renderSplitTabs() {
   const container = document.getElementById('split-tabs');
   const splits = getSplits();
   container.innerHTML = splits.map(s =>
-    `<button class="split-tab-btn" data-split="${s.name}" onclick="selectSplit('${s.name}')"
-      style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all 0.15s">
-      ${s.icon} ${s.name}
+    `<button class="split-pill split-tab-btn" data-split="${s.name}" onclick="selectSplit('${s.name}')">
+      <span class="pill-icon">${s.icon}</span>${s.name}
     </button>`).join('');
 }
 
@@ -1925,16 +2144,17 @@ function selectSplit(split) {
   activeSplit = split;
   const searchEl = document.getElementById('log-ex-search'); if (searchEl) searchEl.value = '';
   document.querySelectorAll('.split-tab-btn').forEach(btn => {
-    const active = btn.dataset.split === split;
-    btn.style.background = active ? 'rgba(232,255,71,0.12)' : 'var(--surface2)';
-    btn.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
-    btn.style.color = active ? 'var(--accent)' : 'var(--text2)';
+    btn.classList.toggle('active', btn.dataset.split === split);
   });
   const exercises = DB.exercises;
   let splitExercises;
   splitExercises = exercises.filter(e => e.category === split);
   const grid = document.getElementById('exercise-picker-grid');
-  document.getElementById('exercise-picker-group').style.display = 'block';
+  const pg = document.getElementById('exercise-picker-group');
+  pg.style.display = 'block';
+  pg.classList.remove('entering');
+  void pg.offsetWidth;
+  pg.classList.add('entering');
   if (splitExercises.length === 0) {
     grid.innerHTML = `<div style="grid-column:1/-1;color:var(--text2);font-size:13px;padding:12px 0">No exercises in this split. Add one with "+ Custom Exercise" on the Exercises page.</div>`;
     return;
@@ -1996,12 +2216,18 @@ function addSetRow(weight='', reps='') {
   const container = document.getElementById('sets-container');
   const idx = container.children.length + 1;
   const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:40px 1fr 1fr 36px;gap:8px;align-items:center;margin-bottom:8px';
+  div.className = 'set-row';
   div.innerHTML = `
-    <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);text-align:center">${idx}</div>
-    <input type="number" class="form-input set-weight" placeholder="Weight kg" value="${weight}" min="0" step="0.5" oninput="_debouncedCheckProgress()">
-    <input type="number" class="form-input set-reps" placeholder="Reps" value="${reps}" min="0" step="1" oninput="_debouncedCheckProgress()">
-    <button onclick="this.parentElement.remove();renumberSets()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px">✕</button>
+    <div class="set-row-num">${idx}</div>
+    <div class="set-input-wrap">
+      <span class="set-input-label">kg</span>
+      <input type="number" class="form-input set-weight" placeholder="0" value="${weight}" min="0" step="0.5" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+    </div>
+    <div class="set-input-wrap">
+      <span class="set-input-label">reps</span>
+      <input type="number" class="form-input set-reps" placeholder="0" value="${reps}" min="0" step="1" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+    </div>
+    <button onclick="this.closest('.set-row').remove();renumberSets()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px;line-height:1;touch-action:manipulation">✕</button>
   `;
   container.appendChild(div);
 }
@@ -2452,7 +2678,7 @@ function renderHistory() {
 
   const el = document.getElementById('history-content');
   if (_historyFiltered.length === 0) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No workouts found</div><div class="empty-text">Start logging to see your history</div></div>`;
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No workouts found</div><div class="empty-text">Nothing matches your filters — try clearing them, or log your first session.</div><button class="btn btn-primary btn-sm" style="margin-top:16px" onclick="showPage('log')">+ Log Workout</button></div>`;
     return;
   }
   renderHistoryPage(el);
@@ -2476,9 +2702,11 @@ function renderHistoryPage(el) {
       <td style="font-family:'DM Mono',monospace">${maxW}kg</td>
       <td style="font-family:'DM Mono',monospace">${vol}kg</td>
       <td>${w.note?`<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:4px 10px" onclick="viewNote(this.dataset.note)" data-note="${w.note.replace(/"/g,'&quot;')}">&#x1F4AC;</button>`:''}</td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-secondary btn-sm" onclick="openEditWorkout('${w.id}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteWorkout('${w.id}')">Delete</button>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditWorkout('${w.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteWorkout('${w.id}')">Del</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
@@ -3050,6 +3278,75 @@ function renderVolumePage() {
 }
 
 // ─── REMINDERS ───
+function renderWeeklySummary() {
+  const workouts = DB.workouts;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
+
+  const thisWeek = workouts.filter(w => parseLocalDate(w.date) >= monday);
+  const lastWeek = workouts.filter(w => {
+    const d = parseLocalDate(w.date);
+    return d >= lastMonday && d < monday;
+  });
+
+  const card = document.getElementById('weekly-summary-card');
+  if (!card) return;
+
+  if (!thisWeek.length && !lastWeek.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  // Dates label
+  const datesEl = document.getElementById('weekly-summary-dates');
+  if (datesEl) {
+    const sun = new Date(monday); sun.setDate(monday.getDate() + 6);
+    datesEl.textContent = formatDateShort(monday.toISOString().slice(0,10)) + ' – ' + formatDateShort(sun.toISOString().slice(0,10));
+  }
+
+  // This week stats
+  const days = new Set(thisWeek.map(w => w.date)).size;
+  const vol = Math.round(thisWeek.reduce((s,w) => s + w.sets.reduce((a,b) => a+b.weight*b.reps, 0), 0));
+  const lastVol = Math.round(lastWeek.reduce((s,w) => s + w.sets.reduce((a,b) => a+b.weight*b.reps, 0), 0));
+
+  const daysEl = document.getElementById('wsum-days');
+  const volEl = document.getElementById('wsum-vol');
+  const vsEl = document.getElementById('wsum-vs');
+  if (daysEl) daysEl.textContent = days;
+  if (volEl) volEl.textContent = vol >= 1000 ? (vol/1000).toFixed(1)+'k' : vol;
+  if (vsEl) {
+    if (lastVol === 0) { vsEl.textContent = '—'; vsEl.style.color = 'var(--text2)'; }
+    else {
+      const pct = Math.round((vol - lastVol) / lastVol * 100);
+      vsEl.textContent = (pct >= 0 ? '+' : '') + pct + '%';
+      vsEl.style.color = pct >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+  }
+
+  // 7-day sparkline
+  const sparkEl = document.getElementById('wsum-sparkline');
+  if (sparkEl) {
+    const days7 = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now); d.setDate(now.getDate() - i);
+      const dateStr = d.toISOString().slice(0,10);
+      const dayVol = workouts.filter(w => w.date === dateStr)
+        .reduce((s,w) => s + w.sets.reduce((a,b) => a+b.weight*b.reps, 0), 0);
+      const isToday = i === 0;
+      const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0,1);
+      days7.push({ vol: dayVol, isToday, dayName, dateStr });
+    }
+    const maxVol7 = Math.max(...days7.map(d => d.vol), 1);
+    sparkEl.innerHTML = days7.map(d => {
+      const h = d.vol > 0 ? Math.max(Math.round((d.vol / maxVol7) * 28), 4) : 2;
+      const col = d.vol > 0 ? (d.isToday ? 'var(--accent)' : 'var(--accent3)') : 'var(--surface3)';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:default" title="${d.dateStr}: ${Math.round(d.vol)}kg">
+        <div style="width:100%;height:${h}px;background:${col};border-radius:2px;transition:height 0.3s ease;min-height:2px"></div>
+        <div style="font-size:9px;color:${d.isToday ? 'var(--accent)' : 'var(--text3)'};font-weight:${d.isToday ? '700' : '500'}">${d.dayName}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
 function renderQuickLog() {
   const workouts = DB.workouts;
   const exercises = DB.exercises;
@@ -5217,7 +5514,7 @@ function renderTemplates() {
   const exercises = DB.exercises;
   const el = document.getElementById('tpl-list');
   if (!tpls.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No templates yet</div><div class="empty-text">Save a full session to load it in one tap next time</div></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No templates yet</div><div class="empty-text">Save a workout as a template to start it in one tap next time.</div><button class="btn btn-primary btn-sm" style="margin-top:16px" onclick="tplOpenCreate()">+ Create Template</button></div>';
     return;
   }
   el.innerHTML = tpls.map(t => {
@@ -5563,11 +5860,35 @@ document.addEventListener('DOMContentLoaded', function() {
     updateAchievementNavBadge();
   } catch(e) {
     console.error('Dialled init error:', e);
-    document.body.innerHTML = '<div style="font-family:sans-serif;padding:40px;max-width:500px;margin:0 auto"><h2 style="color:#e8ff47">⚠️ Something went wrong</h2><p style="color:#ccc;margin:16px 0">Error: ' + e.message + '</p><p style="color:#999">Try clearing your browser cache or opening in a different browser. If the issue persists, contact support.</p><button onclick="localStorage.clear();location.reload()" style="background:#e8ff47;color:#000;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:16px">Clear Data & Restart</button></div>';
+    document.body.innerHTML = '<div style="font-family:sans-serif;padding:40px;max-width:500px;margin:0 auto"><h2 style="color:var(--accent)">⚠️ Something went wrong</h2><p style="color:var(--text2);margin:16px 0">Error: ' + e.message + '</p><p style="color:var(--text3)">Try clearing your browser cache or opening in a different browser. If the issue persists, contact support.</p><button onclick="localStorage.clear();location.reload()" style="background:var(--accent);color:var(--bg);border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:16px">Clear Data & Restart</button></div>';
   }
 });
 
 </script>
+
+<!-- MOBILE BOTTOM TAB BAR -->
+<nav id="bottom-tab-bar">
+  <button class="btab" onclick="showPage('dashboard')" data-page="dashboard">
+    <span class="btab-icon">📊</span>
+    <span class="btab-label">Home</span>
+  </button>
+  <button class="btab" onclick="showPage('log')" data-page="log">
+    <span class="btab-icon">➕</span>
+    <span class="btab-label">Log</span>
+  </button>
+  <button class="btab" onclick="showPage('history')" data-page="history">
+    <span class="btab-icon">📋</span>
+    <span class="btab-label">History</span>
+  </button>
+  <button class="btab" onclick="showPage('stats')" data-page="stats">
+    <span class="btab-icon">📈</span>
+    <span class="btab-label">Stats</span>
+  </button>
+  <button class="btab" onclick="showPage('aipt')" data-page="aipt">
+    <span class="btab-icon">🤖</span>
+    <span class="btab-label">AI PT</span>
+  </button>
+</nav>
 
 <!-- ACHIEVEMENT TOAST -->
 <!-- IN-APP TOAST -->
