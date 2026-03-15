@@ -382,8 +382,9 @@
   }
   @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-  /* Smoother button interactions — GPU-accelerated */
-  .btn { will-change: transform; }
+  /* Smoother button interactions — GPU-accelerated, faster mobile tap */
+  .btn { will-change: transform; touch-action: manipulation; }
+  .nav-item, .exercise-pill, .split-tab-btn, .tab-btn, .template-card, .split-card { touch-action: manipulation; }
   .btn-primary:active { transform: translateY(1px) scale(0.98); }
   .btn-secondary:active { transform: translateY(1px) scale(0.98); }
 
@@ -579,6 +580,41 @@
     --green: #16a34a; --red: #dc2626; --purple: #7c3aed;
   }
   /* ── THEME TOGGLE ── */
+  /* ── IN-APP TOAST (replaces alert) ── */
+  #app-toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+    z-index: 8000; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 600;
+    color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.22,1,0.36,1);
+    white-space: nowrap; max-width: 90vw; text-align: center;
+  }
+  #app-toast.show {
+    opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto;
+  }
+  #app-toast.toast-success { border-color: rgba(74,222,128,.4); color: var(--green); }
+  #app-toast.toast-error   { border-color: rgba(248,113,113,.4); color: var(--red); }
+  #app-toast.toast-info    { border-color: rgba(71,194,255,.4);  color: var(--accent3); }
+
+  /* ── IN-APP CONFIRM MODAL (replaces confirm/prompt) ── */
+  #app-confirm-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+    z-index: 7000; display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s;
+  }
+  #app-confirm-overlay.open { opacity: 1; pointer-events: all; }
+  #app-confirm-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; width: 100%; max-width: 400px;
+    transform: translateY(16px); transition: transform 0.18s cubic-bezier(0.22,1,0.36,1);
+  }
+  #app-confirm-overlay.open #app-confirm-box { transform: translateY(0); }
+  #app-confirm-title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; margin-bottom: 10px; }
+  #app-confirm-msg   { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 20px; }
+  #app-confirm-input { display: none; }
+  #app-confirm-input input { width: 100%; margin-bottom: 16px; }
+
   .theme-toggle { position:fixed; top:16px; right:16px; z-index:301; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:6px 12px; cursor:pointer; font-size:16px; transition:all .2s; }
   /* ── REST TIMER ── */
   .rest-timer { position:fixed; bottom:100px; right:28px; z-index:500; background:var(--surface); border:1px solid var(--accent); border-radius:var(--radius); padding:14px 18px; min-width:160px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,.5); display:none; }
@@ -813,6 +849,7 @@
                 </div>
               </div>
               <div id="prev-note-display" style="display:none;margin-top:8px"></div>
+              <div id="orm-display" style="margin-top:8px"></div>
             </div>
 
             <div id="progress-alerts"></div>
@@ -862,6 +899,11 @@
       </div>
       <div id="ex-split-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px"></div>
       <div id="exercise-list"></div>
+      <div id="exercise-detail-panel" style="display:none;margin-top:16px">
+        <div class="card" style="border-color:rgba(71,194,255,.3)">
+          <div id="exercise-detail-content"></div>
+        </div>
+      </div>
 
       <div style="border-top:1px solid var(--border);margin:28px 0 20px"></div>
 
@@ -971,7 +1013,6 @@
           <div id="progress-split-filter-wrap" style="margin-bottom:12px">
             <select class="form-select" style="width:150px;padding:6px 10px;font-size:13px" id="progress-split-filter" onchange="onProgressSplitChange()"><option value="">All splits</option></select>
           </div>
-          <div id="progress-content"></div>
           <div id="progress-content"></div>
         </div>
       </div>
@@ -1372,6 +1413,19 @@ function _initDebounced() {
 
 
 
+// Safe helpers — guard against empty arrays and null values throughout the app
+function safeMax(arr, key)  { return arr && arr.length ? Math.max(...arr.map(s => s[key])) : 0; }
+function safeMin(arr, key)  { return arr && arr.length ? Math.min(...arr.map(s => s[key])) : 0; }
+function safeBest(arr)      { return arr && arr.length ? arr.reduce((a,b) => b.weight > a.weight ? b : a) : { weight: 0, reps: 0 }; }
+function safeOrmBest(arr)   { return arr && arr.length ? arr.reduce((a,b) => calcORM(b.weight,b.reps) > calcORM(a.weight,a.reps) ? b : a) : { weight: 0, reps: 0 }; }
+
+// Escape HTML to prevent XSS when inserting user-supplied content into innerHTML
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // Chart registry — tracks every Chart.js instance by canvas id.
 // makeChart() auto-destroys any existing chart on that canvas before creating a new one,
 // preventing the "Canvas is already in use" warning and stale instance memory leaks.
@@ -1650,13 +1704,13 @@ function renderDashboard() {
 
   // Recent workouts
   const recentEl = document.getElementById('recent-workouts');
-  const recent = [...workouts].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+  const recent = [...workouts].sort((a,b) => parseLocalDate(b.date) - parseLocalDate(a.date)).slice(0, 6);
   if (recent.length === 0) {
     recentEl.innerHTML = `<div class="empty-state"><div class="empty-icon">🏋️</div><div class="empty-title">No workouts yet</div><div class="empty-text">Log your first workout to get started</div></div>`;
   } else {
     recentEl.innerHTML = recent.map(w => {
       const ex = exercises.find(e => e.id === w.exerciseId);
-      const maxWeight = Math.max(...w.sets.map(s => s.weight));
+      const maxWeight = safeMax(w.sets, 'weight');
       const totalSets = w.sets.length;
       const vol = Math.round(w.sets.reduce((s,set) => s + set.weight*set.reps, 0));
       const col2 = SPLIT_COLORS_HEX[ex?.category] || '#8888a0';
@@ -1715,7 +1769,12 @@ function renderDashboard() {
   });
 }
 
+// Memoized getPRs — recomputed only when workouts change.
+// Call bustPRCache() after any workout write.
+let _prCache = null;
+function bustPRCache() { _prCache = null; }
 function getPRs() {
+  if (_prCache) return _prCache;
   const workouts = DB.workouts;
   const prs = {};
   workouts.forEach(w => {
@@ -1725,11 +1784,13 @@ function getPRs() {
       }
     });
   });
+  _prCache = prs;
   return prs;
 }
 
 function getWeeklyVolume(splitFilter) {
   const workouts = DB.workouts;
+  const exercises = DB.exercises;
   const weeks = {};
   workouts.forEach(w => {
     if(splitFilter){const ex=exercises.find(e=>e.id===w.exerciseId);if(ex?.category!==splitFilter)return;}
@@ -1764,6 +1825,7 @@ function initLogPage() {
   renderSplitTabs();
 }
 
+function renderLogSplitTabs() { renderSplitTabs(); }
 function renderSplitTabs() {
   const container = document.getElementById('split-tabs');
   const splits = getSplits();
@@ -1879,7 +1941,7 @@ function onExerciseChange() {
   const prevBox = document.getElementById('prev-workout-box');
   if (prev) {
     prevBox.classList.add('visible');
-    const maxSet = prev.sets.reduce((a,b) => b.weight > a.weight ? b : a, prev.sets[0]);
+    const maxSet = safeBest(prev.sets);
     document.getElementById('prev-weight').textContent = maxSet.weight + 'kg';
     document.getElementById('prev-reps').textContent = maxSet.reps;
     document.getElementById('prev-sets').textContent = prev.sets.length;
@@ -1898,7 +1960,7 @@ function onExerciseChange() {
 function getLastWorkout(exId) {
   const workouts = DB.workouts.filter(w => w.exerciseId === exId);
   if (!workouts.length) return null;
-  return workouts.sort((a,b) => new Date(b.date) - new Date(a.date))[0];
+  return workouts.sort((a,b) => parseLocalDate(b.date) - parseLocalDate(a.date))[0];
 }
 
 function checkProgress() {
@@ -1911,7 +1973,7 @@ function checkProgress() {
   const reps = [...document.querySelectorAll('.set-reps')].map(i => parseInt(i.value)||0).filter(v => v > 0);
   if (!weights.length) return;
 
-  const prevMax = prev.sets.reduce((a,b) => b.weight > a.weight ? b : a, prev.sets[0]);
+  const prevMax = safeBest(prev.sets);
   const curMaxW = Math.max(...weights);
   const curMaxR = Math.max(...reps);
 
@@ -1929,7 +1991,7 @@ function showSuggestion(prev) {
   const card = document.getElementById('suggestion-card');
   card.style.display = 'block';
   const exId = document.getElementById('log-exercise').value;
-  const maxSet = prev.sets.reduce((a,b) => b.weight > a.weight ? b : a, prev.sets[0]);
+  const maxSet = safeBest(prev.sets);
   const w = maxSet.weight;
   const r = maxSet.reps;
   const isBodyweight = prev.sets.every(s => s.weight === 0);
@@ -1977,8 +2039,8 @@ function saveWorkout() {
 
   const exId = document.getElementById('log-exercise').value;
   const date = document.getElementById('log-date').value;
-  if (!exId) return alert('Please select an exercise');
-  if (!date) return alert('Please select a date');
+  if (!exId) return showToast('Please select an exercise', 'error');
+  if (!date) return showToast('Please select a date', 'error');
 
   const setRows = document.querySelectorAll('#sets-container > div');
   const sets = [];
@@ -1988,7 +2050,7 @@ function saveWorkout() {
     if (r > 0) sets.push({ weight: w || 0, reps: r });
   });
 
-  if (sets.length === 0) return alert('Please add at least one set with reps');
+  if (sets.length === 0) return showToast('Add at least one set with reps', 'error');
 
   // Disable button immediately to block any further taps
   if (btn) {
@@ -2004,6 +2066,7 @@ function saveWorkout() {
   workouts.push({ id: uid(), exerciseId: exId, date, sets, note: note||'' });
   haptic('medium');
   DB.workouts = workouts;
+  bustPRCache();
   setTimeout(() => checkAchievements(), 50);
   if (LB.username && LB.boardId) { setTimeout(lbPush, 500); }
 
@@ -2014,11 +2077,11 @@ function saveWorkout() {
 
 function renderLogChart(exId) {
   const workouts = DB.workouts.filter(w => w.exerciseId === exId)
-    .sort((a,b) => new Date(a.date) - new Date(b.date));
+    .sort((a,b) => parseLocalDate(a.date) - parseLocalDate(b.date));
   if (workouts.length < 2) { document.getElementById('log-chart-card').style.display='none'; return; }
   document.getElementById('log-chart-card').style.display = 'block';
   const labels = workouts.map(w => formatDateShort(w.date));
-  const data = workouts.map(w => Math.max(...w.sets.map(s => s.weight)));
+  const data = workouts.map(w => safeMax(w.sets, 'weight'));
   if (logChart) logChart.destroy();
   // Volume chart
   if(document.getElementById('log-volume-card') && workouts.length >= 2){
@@ -2064,9 +2127,9 @@ function openExerciseModal() {
 function closeExerciseModal() { document.getElementById('exercise-modal').classList.remove('open'); }
 
 function saveExercise() {
-  const name = document.getElementById('new-exercise-name').value.trim();
+  const name = document.getElementById('new-exercise-name').value.trim().replace(/[<>"'&]/g, '').slice(0, 60);
   const category = document.getElementById('new-exercise-category').value;
-  if (!name) return alert('Enter an exercise name');
+  if (!name) return showToast('Enter an exercise name', 'error');
   const exercises = DB.exercises;
   exercises.push({ id: uid(), name, category });
   DB.exercises = exercises;
@@ -2095,7 +2158,7 @@ function renderExercises() {
     const active = s === activeExSplit;
     return `<button onclick="setExSplit('${s}')"
       style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;border:1px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'rgba(232,255,71,0.1)' : 'var(--surface2)'};color:${active ? 'var(--accent)' : 'var(--text2)'};cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;transition:all 0.15s">
-      ${SPLIT_ICONS[s]} ${s} <span style="opacity:0.6;font-size:11px">${count}</span>
+      ${getSplitIcon(s)} ${s} <span style="opacity:0.6;font-size:11px">${count}</span>
     </button>`;
   }).join('');
 
@@ -2135,8 +2198,8 @@ function setExSplit(split) {
   renderExercises();
 }
 
-function deleteExercise(id) {
-  if (!confirm('Delete this exercise and all its workout data?')) return;
+async function deleteExercise(id) {
+  if (!await showConfirm('Delete this exercise and all its workout data?', 'Delete Exercise')) return;
   DB.exercises = DB.exercises.filter(e => e.id !== id);
   DB.workouts = DB.workouts.filter(w => w.exerciseId !== id);
   renderExercises();
@@ -2148,11 +2211,11 @@ let exerciseDetailChart = null;
 function showExerciseDetail(exId) {
   const panel = document.getElementById('exercise-detail-panel');
   const ex = DB.exercises.find(e => e.id === exId);
-  const workouts = DB.workouts.filter(w => w.exerciseId === exId).sort((a,b) => new Date(a.date) - new Date(b.date));
+  const workouts = DB.workouts.filter(w => w.exerciseId === exId).sort((a,b) => parseLocalDate(a.date) - parseLocalDate(b.date));
   panel.style.display = 'block';
 
   const pr = workouts.reduce((best, w) => {
-    const maxSet = w.sets.reduce((a,b) => b.weight > a.weight ? b : a, w.sets[0]);
+    const maxSet = safeBest(w.sets);
     return maxSet.weight > (best.weight||0) ? maxSet : best;
   }, {});
 
@@ -2201,7 +2264,7 @@ function showExerciseDetail(exId) {
         labels: workouts.map(w => formatDateShort(w.date)),
         datasets: [{
           label: 'Max Weight (kg)',
-          data: workouts.map(w => Math.max(...w.sets.map(s => s.weight))),
+          data: workouts.map(w => safeMax(w.sets, 'weight')),
           borderColor: 'rgba(71,194,255,0.9)',
           backgroundColor: 'rgba(71,194,255,0.1)',
           borderWidth: 2,
@@ -2238,7 +2301,7 @@ function renderHistory() {
   let workouts = DB.workouts;
   if(splitFilterVal) workouts = workouts.filter(w=>{const ex=exercises.find(e=>e.id===w.exerciseId);return ex?.category===splitFilterVal;});
   if (filterVal) workouts = workouts.filter(w => w.exerciseId === filterVal);
-  workouts = workouts.sort((a,b) => new Date(b.date) - new Date(a.date));
+  workouts = workouts.sort((a,b) => parseLocalDate(b.date) - parseLocalDate(a.date));
 
   const el = document.getElementById('history-content');
   if (workouts.length === 0) {
@@ -2251,7 +2314,7 @@ function renderHistory() {
     <tbody>
       ${workouts.map(w => {
         const ex = exercises.find(e => e.id === w.exerciseId);
-        const maxW = Math.max(...w.sets.map(s => s.weight));
+        const maxW = safeMax(w.sets, 'weight');
         const vol = Math.round(w.sets.reduce((s,set) => s + set.weight*set.reps, 0));
         return `<tr>
           <td style="font-family:'DM Mono',monospace;font-size:13px">${formatDate(w.date)}</td>
@@ -2267,9 +2330,10 @@ function renderHistory() {
   </table></div>`;
 }
 
-function deleteWorkout(id) {
-  if (!confirm('Delete this workout entry?')) return;
+async function deleteWorkout(id) {
+  if (!await showConfirm('Delete this workout entry?', 'Delete Workout')) return;
   DB.workouts = DB.workouts.filter(w => w.id !== id);
+  bustPRCache();
   renderHistory();
 }
 
@@ -2307,7 +2371,7 @@ function renderProgressCharts() {
   }
 
   const ex = DB.exercises.find(e => e.id === exId);
-  const workouts = DB.workouts.filter(w => w.exerciseId === exId).sort((a,b) => new Date(a.date) - new Date(b.date));
+  const workouts = DB.workouts.filter(w => w.exerciseId === exId).sort((a,b) => parseLocalDate(a.date) - parseLocalDate(b.date));
 
   if (workouts.length < 1) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">📈</div><div class="empty-title">No data yet</div><div class="empty-text">Log this exercise to see your progress chart</div></div>`;
@@ -2315,17 +2379,17 @@ function renderProgressCharts() {
   }
 
   const labels = workouts.map(w => formatDateShort(w.date));
-  const maxWeights = workouts.map(w => Math.max(...w.sets.map(s => s.weight)));
+  const maxWeights = workouts.map(w => safeMax(w.sets, 'weight'));
   const volumes = workouts.map(w => Math.round(w.sets.reduce((sum,s) => sum + s.weight*s.reps*w.sets.length/w.sets.length, 0)));
   const totalVols = workouts.map(w => Math.round(w.sets.reduce((sum,s) => sum + s.weight*s.reps, 0)));
-  const maxReps = workouts.map(w => Math.max(...w.sets.map(s => s.reps)));
+  const maxReps = workouts.map(w => safeMax(w.sets, 'reps'));
 
   // Monthly averages
   const monthlyData = {};
   workouts.forEach(w => {
     const key = w.date.slice(0,7);
     if (!monthlyData[key]) monthlyData[key] = [];
-    monthlyData[key].push(Math.max(...w.sets.map(s => s.weight)));
+    monthlyData[key].push(safeMax(w.sets, 'weight'));
   });
   const monthLabels = Object.keys(monthlyData).sort();
   const monthAvgs = monthLabels.map(k => Math.round(monthlyData[k].reduce((a,b)=>a+b,0)/monthlyData[k].length * 10)/10);
@@ -2423,12 +2487,28 @@ function chartOptions(yLabel) {
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────────────────────────
+// Aliases used in older parts of the codebase
+function fmtDate(d)      { return formatDate(d); }
+function fmtDateShort(d) { return formatDateShort(d); }
+function chartOpts(label){ return chartOptions(label); }
+
+// Parse a YYYY-MM-DD string as LOCAL midnight (not UTC midnight)
+// Without the T00:00:00 suffix, new Date('2024-01-15') = UTC midnight
+// which is the previous day for anyone west of UTC — causes wrong sorting & display
+function parseLocalDate(d) {
+  if (!d) return new Date(NaN);
+  // Already has time component — parse as-is
+  if (d.length > 10) return new Date(d);
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m - 1, day);
+}
+
 function formatDate(d) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  return parseLocalDate(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 }
 
 function formatDateShort(d) {
-  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+  return parseLocalDate(d).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
 }
 
 // Close modal on overlay click
@@ -2476,7 +2556,7 @@ function renderVolumePage() {
   if(periodVal !== 'all'){
     const weeks = parseInt(periodVal);
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-weeks*7);
-    filtered = workouts.filter(w=>new Date(w.date)>=cutoff);
+    filtered = workouts.filter(w=>parseLocalDate(w.date)>=cutoff);
   }
   const splitVols = {};
   allSplits.forEach(s=>splitVols[s]=0);
@@ -2610,7 +2690,7 @@ function quickLogEx(exId){
 // ═══════════════════════════════════════════════════════════════════
 function getPTAdvice(exerciseId, targetSets, targetReps) {
   const workouts = DB.workouts.filter(w => w.exerciseId === exerciseId)
-    .sort((a,b) => new Date(b.date) - new Date(a.date));
+    .sort((a,b) => parseLocalDate(b.date) - parseLocalDate(a.date));
 
   if (!workouts.length) {
     return { headline: "First time? Start light", detail: "Pick a comfortable weight and focus on form. You can always go heavier next time.", emoji: "🎯", type: "first" };
@@ -2618,14 +2698,14 @@ function getPTAdvice(exerciseId, targetSets, targetReps) {
 
   const last = workouts[0];
   const isBodyweight = last.sets.every(s => s.weight === 0);
-  const maxWeight = Math.max(...last.sets.map(s => s.weight));
+  const maxWeight = safeMax(last.sets, 'weight');
   const totalReps = last.sets.reduce((s, x) => s + x.reps, 0);
   const avgReps = Math.round(totalReps / last.sets.length);
   const allSets = last.sets.length;
 
   // Look at last 3 sessions for trend
   const recent = workouts.slice(0, 3);
-  const recentMaxWeights = recent.map(w => Math.max(...w.sets.map(s => s.weight)));
+  const recentMaxWeights = recent.map(w => safeMax(w.sets, 'weight'));
   const isProgressing = recentMaxWeights.length >= 2 && recentMaxWeights[0] > recentMaxWeights[1];
   const isStalling = recentMaxWeights.length >= 3 &&
     recentMaxWeights[0] === recentMaxWeights[1] &&
@@ -2859,7 +2939,7 @@ function guidedPrev() {
   window.scrollTo(0, 0);
 }
 
-function guidedFinish() {
+async function guidedFinish() {
   const finishBtn = document.getElementById('guided-finish-btn');
   if (finishBtn && finishBtn.disabled) return;
   if (finishBtn) { finishBtn.disabled = true; }
@@ -2886,7 +2966,7 @@ function guidedFinish() {
   });
 
   if (saved === 0) {
-    if (!confirm('No sets logged — quit anyway?')) return;
+    if (!await showConfirm('No sets logged — quit anyway?', 'Quit Workout')) return;
   }
 
   // Calculate duration
@@ -2899,6 +2979,7 @@ function guidedFinish() {
   // Update progress bar to 100%
   document.getElementById('guided-progress-bar').style.width = '100%';
 
+  bustPRCache();
   checkAchievements();
   updateAchievementNavBadge();
   haptic('success');
@@ -2915,8 +2996,8 @@ function guidedFinish() {
   }, 1500);
 }
 
-function guidedQuit() {
-  if (!confirm('Quit this workout? Your progress so far will be lost.')) return;
+async function guidedQuit() {
+  if (!await showConfirm('Quit this workout? Your progress so far will be lost.', 'Quit Workout')) return;
   _guidedTpl = null;
   showPage('templates');
 }
@@ -2954,7 +3035,7 @@ function aiptGetContext() {
   // Recent workouts
   const recentStr = recentWorkouts.map(w => {
     const ex = exercises.find(e => e.id === w.exerciseId);
-    const maxW = Math.max(...w.sets.map(s => s.weight));
+    const maxW = safeMax(w.sets, 'weight');
     const vol = Math.round(w.sets.reduce((s,x)=>s+x.weight*x.reps,0));
     return `${w.date}: ${ex?.name||'Unknown'} — ${w.sets.length} sets, max ${maxW}kg, ${vol}kg vol`;
   }).join('\n');
@@ -2963,7 +3044,7 @@ function aiptGetContext() {
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
   weekStart.setHours(0,0,0,0);
-  const thisWeek = workouts.filter(w => new Date(w.date) >= weekStart);
+  const thisWeek = workouts.filter(w => parseLocalDate(w.date) >= weekStart);
   const weekSplits = {};
   thisWeek.forEach(w => {
     const ex = exercises.find(e => e.id === w.exerciseId);
@@ -3033,9 +3114,11 @@ async function aiptAsk(message) {
     });
 
     const data = await response.json();
-    console.log('AI PT response:', JSON.stringify(data).slice(0,300));
-    const reply = data.choices?.[0]?.message?.content || 
-      (data.error ? 'API Error: ' + (data.error.message || JSON.stringify(data.error)) : 
+    // Handle both Anthropic native format (data.content[0].text)
+    // and OpenAI-compatible format (data.choices[0].message.content) from worker proxy
+    const reply = data.content?.[0]?.text ||
+      data.choices?.[0]?.message?.content ||
+      (data.error ? 'Error: ' + (data.error.message || data.error.type || JSON.stringify(data.error)) :
       'Sorry, I could not get a response. Try again.');
 
     // Remove typing indicator
@@ -3074,7 +3157,7 @@ function aiptRenderMessages() {
     if (isUser) {
       return `<div style="display:flex;gap:10px;margin-bottom:14px;flex-direction:row-reverse">
         <div style="width:32px;height:32px;border-radius:50%;background:rgba(232,255,71,.2);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">You</div>
-        <div style="background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);border-radius:12px 2px 12px 12px;padding:10px 14px;font-size:14px;color:var(--text);max-width:80%;line-height:1.5">${msg.content}</div>
+        <div style="background:rgba(232,255,71,.08);border:1px solid rgba(232,255,71,.2);border-radius:12px 2px 12px 12px;padding:10px 14px;font-size:14px;color:var(--text);max-width:80%;line-height:1.5">${escHtml(msg.content)}</div>
       </div>`;
     } else {
       // Format AI response — convert **bold** and newlines
@@ -3128,7 +3211,11 @@ function statsSetTab(tab) {
     btn.style.borderColor = active ? 'rgba(232,255,71,.3)' : 'var(--border)';
     btn.style.color = active ? 'var(--accent)' : 'var(--text2)';
   });
-  if (tab === 'body') renderBodyweight();
+  if (tab === 'body') {
+    const dateEl = document.getElementById('bw-date');
+    if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+    renderBodyweight();
+  }
   if (tab === 'volume') renderVolumePage();
   if (tab === 'progress') renderProgressPage();
 }
@@ -3363,11 +3450,11 @@ function lbGenerateId() {
 }
 
 async function lbJoin() {
-  const username = document.getElementById('lb-username-input').value.trim();
-  const boardId  = document.getElementById('lb-board-input').value.trim().toLowerCase().replace(/\s+/g,'-');
-  if (!username) return alert('Enter a username');
-  if (!boardId)  return alert('Enter a board ID');
-  if (username.length < 2) return alert('Username must be at least 2 characters');
+  const username = document.getElementById('lb-username-input').value.trim().replace(/[<>"'&]/g, '').slice(0, 20);
+  const boardId  = document.getElementById('lb-board-input').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 30);
+  if (!username) return showToast('Enter a username', 'error');
+  if (!boardId)  return showToast('Enter a board ID', 'error');
+  if (username.length < 2) return showToast('Username must be at least 2 characters', 'error');
   LB.username = username;
   LB.boardId  = boardId;
   document.getElementById('lb-setup-card').style.display = 'none';
@@ -3379,7 +3466,7 @@ async function lbJoin() {
 }
 
 async function lbLeave() {
-  if (!confirm('Leave this leaderboard? Your local data is safe.')) return;
+  if (!await showConfirm('Leave this leaderboard? Your local data is safe.', 'Leave Leaderboard')) return;
   lbStopPolling();
   // Delete from Supabase
   try {
@@ -3553,8 +3640,8 @@ async function lbLoadChat() {
     return `<div style="display:flex;gap:10px;margin-bottom:14px;${isMe?'flex-direction:row-reverse':''}">
       <div style="width:32px;height:32px;border-radius:50%;background:hsl(${hue},60%,35%);color:hsl(${hue},60%,80%);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials}</div>
       <div style="max-width:75%">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;${isMe?'text-align:right':''}">${isMe?'You':m.username} · ${date} ${time}</div>
-        <div style="background:${isMe?'rgba(232,255,71,.1)':'var(--surface2)'};border:1px solid ${isMe?'rgba(232,255,71,.2)':'var(--border)'};border-radius:${isMe?'12px 2px 12px 12px':'2px 12px 12px 12px'};padding:10px 14px;font-size:14px;color:var(--text);line-height:1.4">${m.message}</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;${isMe?'text-align:right':''}">${isMe?'You':escHtml(m.username)} · ${date} ${time}</div>
+        <div style="background:${isMe?'rgba(232,255,71,.1)':'var(--surface2)'};border:1px solid ${isMe?'rgba(232,255,71,.2)':'var(--border)'};border-radius:${isMe?'12px 2px 12px 12px':'2px 12px 12px 12px'};padding:10px 14px;font-size:14px;color:var(--text);line-height:1.4">${escHtml(m.message)}</div>
       </div>
     </div>`;
   }).join('');
@@ -3591,7 +3678,7 @@ function appendEmoji(e) {
 async function lbSendChat() {
   const input = document.getElementById('chat-input');
   if (!input) return;
-  const message = input.value.trim();
+  const message = input.value.replace(/<[^>]*>/g, '').trim();
   if (!message) return;
   input.value = '';
   try {
@@ -3608,7 +3695,7 @@ async function lbSendChat() {
     await lbLoadChat();
   } catch(e) {
     console.error('lbSendChat:', e);
-    alert('Could not send — check your connection');
+    showToast('Could not send — check your connection', 'error');
     input.value = message;
   }
 }
@@ -3709,7 +3796,7 @@ function renderSplitsPage() {
   }).join('');
 }
 
-function confirmDeleteSplit(splitId) {
+async function confirmDeleteSplit(splitId) {
   const splits = getSplits();
   const s = splits.find(sp => sp.id === splitId);
   if (!s) return;
@@ -3718,7 +3805,7 @@ function confirmDeleteSplit(splitId) {
   const msg = exCount > 0
     ? `Delete "${s.name}"? The ${exCount} exercise${exCount!==1?'s':''} in this split will be moved to "Uncategorised".`
     : `Delete split "${s.name}"?`;
-  if (!confirm(msg)) return;
+  if (!await showConfirm(msg, 'Delete Split')) return;
   deleteSplit(splitId);
 }
 
@@ -3735,8 +3822,8 @@ function deleteSplit(splitId) {
   scheduleSplitSelects();
 }
 
-function resetSplitsToDefault() {
-  if (!confirm('Reset to the 6 default splits? Your exercises and workouts are safe.')) return;
+async function resetSplitsToDefault() {
+  if (!await showConfirm('Reset to the 6 default splits? Your exercises and workouts are safe.', 'Reset Splits')) return;
   DB.splits = DEFAULT_SPLITS.map(s => ({ ...s, id: 'split_' + s.name.toLowerCase() }));
   scheduleSplitSelects();
   renderSplitsPage();
@@ -3784,7 +3871,7 @@ function saveSplitModal() {
   const icon  = document.getElementById('split-modal-icon').value.trim() || '⚙️';
   const color = document.getElementById('split-modal-color').value || '#8888a0';
   const editId = document.getElementById('split-modal-editing-id').value;
-  if (!name) return alert('Enter a split name');
+  if (!name) return showToast('Enter a split name', 'error');
 
   let splits = getSplits();
 
@@ -3800,7 +3887,7 @@ function saveSplitModal() {
   } else {
     // Check duplicate
     if (splits.find(s => s.name.toLowerCase() === name.toLowerCase())) {
-      return alert('A split with that name already exists');
+      return showToast('A split with that name already exists', 'error');
     }
     splits.push({ id: 'split_' + uid(), name, icon, color });
   }
@@ -3930,11 +4017,17 @@ function checkAchievements() {
   const exercises = DB.exercises;
   const unlockedSet = new Set(DB.unlockedAchievements);
   const newly = [];
+  // Compute PRs once here — achievement checks that need it use this snapshot
+  // rather than each calling getPRs() independently (was 4 separate O(n) scans)
+  const _prsSnapshot = getPRs();
+  const _origGetPRs = window.getPRs;
+  window.getPRs = () => _prsSnapshot; // shadow globally during this loop
   ACHIEVEMENTS.forEach(a => {
     if (!unlockedSet.has(a.id)) {
       try { if (a.check(workouts, exercises)) { unlockedSet.add(a.id); newly.push(a); } } catch(e){}
     }
   });
+  window.getPRs = _origGetPRs; // restore
   if (newly.length) {
     DB.unlockedAchievements = [...unlockedSet];
     updateAchievementNavBadge();
@@ -4269,7 +4362,7 @@ function renderORMDisplay(exId) {
   if (!el) return;
   const prev = getLastWorkout(exId);
   if (!prev) { el.innerHTML = ''; return; }
-  const best = prev.sets.reduce((a,b) => calcORM(b.weight,b.reps) > calcORM(a.weight,a.reps) ? b : a, prev.sets[0]);
+  const best = safeOrmBest(prev.sets);
   const orm = calcORM(best.weight, best.reps);
   el.innerHTML = `<div class="orm-badge">💪 Est. 1RM: ${orm}kg <span style="font-weight:400;font-size:11px">(${best.weight}kg×${best.reps})</span></div>`;
 }
@@ -4327,17 +4420,18 @@ function renderDeloadBanner() {
 let bwChart = null;
 
 function bwOpenLog() {
-  const card = document.getElementById('bw-log-card');
-  card.style.display = card.style.display === 'none' ? 'block' : 'none';
-  document.getElementById('bw-date-input').value = new Date().toISOString().slice(0,10);
-  document.getElementById('bw-input').focus();
+  // The weight form is always visible inline — just pre-fill date and focus weight field
+  const dateEl = document.getElementById('bw-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+  const weightEl = document.getElementById('bw-weight');
+  if (weightEl) weightEl.focus();
 }
 
 function bwSave() {
-  const val  = parseFloat(document.getElementById('bw-input').value);
-  const date = document.getElementById('bw-date-input').value;
-  if (!val || val < 20) return alert('Enter a valid weight');
-  if (!date) return alert('Select a date');
+  const val  = parseFloat(document.getElementById('bw-weight').value);
+  const date = document.getElementById('bw-date').value;
+  if (!val || val < 20) { showToast('Enter a valid weight (must be over 20kg)', 'error'); return; }
+  if (!date)            { showToast('Select a date', 'error'); return; }
   haptic('medium');
   const bw = DB.bodyweight;
   const existing = bw.findIndex(e => e.date === date);
@@ -4345,19 +4439,24 @@ function bwSave() {
   else bw.push({ date, weight: val });
   bw.sort((a,b) => new Date(a.date)-new Date(b.date));
   DB.bodyweight = bw;
-  document.getElementById('bw-log-card').style.display = 'none';
-  document.getElementById('bw-input').value = '';
+  document.getElementById('bw-weight').value = '';
+  showToast('Weight saved!', 'success');
   renderBodyweight();
 }
 
 function renderBodyweight() {
+  // Pre-fill the date input with today if empty
+  const dateEl = document.getElementById('bw-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
   const bw = DB.bodyweight.sort((a,b) => new Date(a.date)-new Date(b.date));
   const el = document.getElementById('bw-history');
-  const statsEl = document.getElementById('bw-stats');
+  // bw-stats doesn't exist as a separate element — update the individual stat cards instead
+  const statsEl = null;
 
   if (!bw.length) {
     el.innerHTML = '<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">No weight logged</div><div class="empty-text">Log your first weight to start tracking</div></div>';
-    statsEl.innerHTML = '';
+    // clear stat cards
+    ['bw-current','bw-change','bw-min','bw-avg'].forEach(id => { const el2 = document.getElementById(id); if(el2) el2.textContent = '—'; });
   } else {
     // Last 10 entries
     el.innerHTML = [...bw].reverse().slice(0,12).map(e =>
@@ -4373,14 +4472,10 @@ function renderBodyweight() {
     const change = (last - first).toFixed(1);
     const min = Math.min(...weights), max = Math.max(...weights);
     const avg = (weights.reduce((a,b)=>a+b,0)/weights.length).toFixed(1);
-    statsEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        ${[['Current',last+'kg'],['Change',(change>0?'+':'')+change+'kg'],['Min',min+'kg'],['Max',max+'kg'],['Avg',avg+'kg'],['Entries',bw.length]].map(([l,v])=>
-          `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${l}</div>
-            <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:500">${v}</div>
-          </div>`).join('')}
-      </div>`;
+    const cwEl = document.getElementById('bw-current'); if(cwEl) cwEl.textContent = last+'kg';
+    const chEl = document.getElementById('bw-change');  if(chEl) { chEl.textContent = (change>0?'+':'')+change+'kg'; chEl.style.color = change>0?'var(--green)':change<0?'var(--red)':''; }
+    const mnEl = document.getElementById('bw-min');     if(mnEl) mnEl.textContent = min+'kg';
+    const avEl = document.getElementById('bw-avg');     if(avEl) avEl.textContent = avg+'kg';
   }
 
   // Chart
@@ -4398,8 +4493,8 @@ function renderBodyweight() {
   }
 }
 
-function bwDelete(date) {
-  if (!confirm('Delete this entry?')) return;
+async function bwDelete(date) {
+  if (!await showConfirm('Delete this entry?', 'Delete Entry')) return;
   DB.bodyweight = DB.bodyweight.filter(e => e.date !== date);
   renderBodyweight();
 }
@@ -4420,7 +4515,7 @@ function tplAddExRow() {
   const splits = getSplits();
   const container = document.getElementById('tpl-exercises-list');
   if (!exercises.length) {
-    alert('No exercises found. Go to the Exercises page first to set up your library.');
+    showToast('No exercises found — add some on the Manage page first', 'error');
     return;
   }
   const rowId = 'tpl-row-' + Date.now();
@@ -4516,11 +4611,11 @@ function tplFilterEx(input, rowId) {
 
 function tplSave() {
   const nameEl = document.getElementById('tpl-name-input');
-  if (!nameEl) return alert('Form error — try reopening the template creator');
+  if (!nameEl) return showToast('Form error — try reopening', 'error');
   const name = nameEl.value.trim();
-  if (!name) return alert('Enter a template name');
+  if (!name) return showToast('Enter a template name', 'error');
   const rows = document.querySelectorAll('#tpl-exercises-list > div');
-  if (!rows.length) return alert('Add at least one exercise first');
+  if (!rows.length) return showToast('Add at least one exercise first', 'error');
   const exercises = [];
   rows.forEach(row => {
     const sel = row.querySelector('select');
@@ -4533,7 +4628,7 @@ function tplSave() {
       });
     }
   });
-  if (!exercises.length) return alert('Could not read exercises — try removing and re-adding them');
+  if (!exercises.length) return showToast('Could not read exercises — try re-adding', 'error');
   try {
     const tpls = DB.templates;
     tpls.push({ id: uid(), name, exercises, createdAt: new Date().toISOString() });
@@ -4542,7 +4637,7 @@ function tplSave() {
     tplCloseCreate();
     renderTemplates();
   } catch(e) {
-    alert('Save failed: ' + e.message);
+    showToast('Save failed: ' + e.message, 'error');
   }
 }
 
@@ -4603,27 +4698,27 @@ function tplLoadExercise(tplId, exerciseIndex) {
   }, 100);
 }
 
-function tplDelete(id) {
-  if (!confirm('Delete this template?')) return;
+async function tplDelete(id) {
+  if (!await showConfirm('Delete this template?', 'Delete Template')) return;
   DB.templates = DB.templates.filter(t=>t.id!==id);
   renderTemplates();
 }
 
 // Save current log as template
-function tplSaveCurrentAsTemplate() {
+async function tplSaveCurrentAsTemplate() {
   const exId = document.getElementById('log-exercise').value;
-  if (!exId) return alert('Select an exercise first');
+  if (!exId) { showToast('Select an exercise first', 'error'); return; }
   const rows = document.querySelectorAll('#sets-container > div');
   const sets = rows.length || 3;
   const reps = parseInt(document.querySelector('.set-reps')?.value)||10;
   const ex = DB.exercises.find(e=>e.id===exId);
-  const name = prompt('Template name?', ex?.name + ' Session');
+  const name = await showPrompt('', ex?.name + ' Session', 'Template Name');
   if (!name) return;
   const tpls = DB.templates;
   tpls.push({ id: uid(), name, exercises:[{exerciseId: exId, sets, reps}], createdAt: new Date().toISOString() });
   DB.templates = tpls;
   haptic('success');
-  alert('Template saved!');
+  showToast('Template saved!', 'success');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -4636,10 +4731,10 @@ function handleImport(event) {
   reader.onload = e => {
     if (DB.importAll(e.target.result)) {
       haptic('success');
-      alert('Data imported successfully! Refreshing...');
+      showToast('Data imported! Reloading…', 'success');
       location.reload();
     } else {
-      alert('Invalid backup file. Please use a file exported from this app.');
+      showToast('Invalid backup file', 'error');
     }
   };
   reader.readAsText(file);
@@ -4656,7 +4751,7 @@ window.addEventListener('beforeinstallprompt', e => {
 });
 function pwaDoPWA() {
   if (_pwaPrompt) { _pwaPrompt.prompt(); _pwaPrompt.userChoice.then(()=>{ document.getElementById('pwa-banner').style.display='none'; }); }
-  else { alert('To install: use your browser\'s "Add to Home Screen" option in the share/menu button.'); }
+  else { showToast('Use your browser\'s "Add to Home Screen" to install', 'info'); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -4677,7 +4772,7 @@ function getWeeklyStats() {
   const workouts = DB.workouts;
   const now = new Date();
   const monday = new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7)); monday.setHours(0,0,0,0);
-  const sunday = new Date(monday); sunday.setDate(monday.getDate()+7);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+7); sunday.setHours(23,59,59,999);
   const thisWeek = workouts.filter(w => { const d=new Date(w.date); return d>=monday && d<sunday; });
   return {
     sessions: thisWeek.length,
@@ -4746,6 +4841,75 @@ function lbRenderH2H(entries) {
 }
 
 
+// ═══════════════════════════════════════════════════════════════════
+// IN-APP NOTIFICATION SYSTEM — replaces alert / confirm / prompt
+// ═══════════════════════════════════════════════════════════════════
+
+let _toastTimeout = null;
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('app-toast');
+  if (!el) { console.warn(msg); return; }
+  el.textContent = msg;
+  el.className = 'show toast-' + type;
+  clearTimeout(_toastTimeout);
+  _toastTimeout = setTimeout(() => { el.classList.remove('show'); }, 2800);
+}
+
+// Returns a Promise<boolean> — resolves true on confirm, false on cancel
+function showConfirm(msg, title = 'Are you sure?') {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('app-confirm-overlay');
+    const inputWrap = document.getElementById('app-confirm-input');
+    document.getElementById('app-confirm-title').textContent = title;
+    document.getElementById('app-confirm-msg').textContent = msg;
+    inputWrap.style.display = 'none';
+    overlay.classList.add('open');
+
+    const okBtn     = document.getElementById('app-confirm-ok');
+    const cancelBtn = document.getElementById('app-confirm-cancel');
+    okBtn.textContent = 'Confirm';
+
+    function cleanup(result) {
+      overlay.classList.remove('open');
+      okBtn.replaceWith(okBtn.cloneNode(true));
+      cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+      resolve(result);
+    }
+    document.getElementById('app-confirm-ok').addEventListener('click',     () => cleanup(true),  { once: true });
+    document.getElementById('app-confirm-cancel').addEventListener('click', () => cleanup(false), { once: true });
+  });
+}
+
+// Returns a Promise<string|null> — resolves with value or null on cancel
+function showPrompt(msg, defaultVal = '', title = 'Enter a value') {
+  return new Promise(resolve => {
+    const overlay   = document.getElementById('app-confirm-overlay');
+    const inputWrap = document.getElementById('app-confirm-input');
+    const field     = document.getElementById('app-confirm-field');
+    document.getElementById('app-confirm-title').textContent = title;
+    document.getElementById('app-confirm-msg').textContent = msg;
+    inputWrap.style.display = 'block';
+    field.value = defaultVal;
+    overlay.classList.add('open');
+    setTimeout(() => field.focus(), 100);
+
+    const okBtn     = document.getElementById('app-confirm-ok');
+    const cancelBtn = document.getElementById('app-confirm-cancel');
+    okBtn.textContent = 'OK';
+
+    function cleanup(result) {
+      overlay.classList.remove('open');
+      inputWrap.style.display = 'none';
+      okBtn.replaceWith(okBtn.cloneNode(true));
+      cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+      resolve(result);
+    }
+    document.getElementById('app-confirm-ok').addEventListener('click',     () => cleanup(field.value.trim() || null), { once: true });
+    document.getElementById('app-confirm-cancel').addEventListener('click', () => cleanup(null), { once: true });
+    field.addEventListener('keydown', (e) => { if (e.key === 'Enter') { cleanup(field.value.trim() || null); } }, { once: true });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   try {
     _initDebounced();
@@ -4763,6 +4927,22 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- ACHIEVEMENT TOAST -->
+<!-- IN-APP TOAST -->
+<div id="app-toast"></div>
+
+<!-- IN-APP CONFIRM / PROMPT MODAL -->
+<div id="app-confirm-overlay">
+  <div id="app-confirm-box">
+    <div id="app-confirm-title">Are you sure?</div>
+    <div id="app-confirm-msg"></div>
+    <div id="app-confirm-input"><input type="text" class="form-input" id="app-confirm-field" placeholder=""></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1" id="app-confirm-ok">Confirm</button>
+      <button class="btn btn-secondary" id="app-confirm-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="achievement-toast" class="hidden">
   <div class="toast-inner" id="toast-inner">
     <div class="toast-top-bar" id="toast-top-bar"></div>
