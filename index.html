@@ -2115,6 +2115,8 @@ function getWeeklyVolume(splitFilter) {
 let logChart = null;
 
 function initLogPage() {
+  // Clear session save-lock when the log page is properly reset
+  _savedThisSession.clear();
   document.getElementById('log-exercise').value = '';
   document.getElementById('log-date').value = new Date().toISOString().slice(0, 10);
   resetSetRows();
@@ -2351,7 +2353,11 @@ function applySuggestion(weight, reps) {
   checkProgress();
 }
 
-function saveWorkout() {
+// Track which exercise+date combos have been saved this session
+// Cleared when the user navigates away from the log page
+const _savedThisSession = new Set();
+
+async function saveWorkout() {
   const btn = document.getElementById('save-workout-btn');
 
   // Prevent double-saves — if already saving, bail out immediately
@@ -2372,6 +2378,18 @@ function saveWorkout() {
 
   if (sets.length === 0) return showToast('Add at least one set with reps', 'error');
 
+  // Check for duplicate — same exercise already logged on this date
+  const dupKey = exId + '|' + date;
+  const alreadyInDB = DB.workouts.some(w => w.exerciseId === exId && w.date === date);
+  if (alreadyInDB || _savedThisSession.has(dupKey)) {
+    const ex = DB.exercises.find(e => e.id === exId);
+    const confirmed = await showConfirm(
+      `You've already logged ${ex ? ex.name : 'this exercise'} on ${formatDate(date)}. Log another set anyway?`,
+      'Duplicate Entry'
+    );
+    if (!confirmed) return;
+  }
+
   // Disable button immediately to block any further taps
   if (btn) {
     btn.disabled = true;
@@ -2380,6 +2398,9 @@ function saveWorkout() {
     btn.style.opacity = '0.85';
     btn.style.cursor = 'default';
   }
+
+  // Mark this combo as saved for the rest of this session
+  _savedThisSession.add(dupKey);
 
   const note = (document.getElementById('log-notes') ? document.getElementById('log-notes').value : '').trim();
 
@@ -4346,25 +4367,44 @@ function lbGetLastMonday() {
   return d;
 }
 
-// Check if we need to crown last week's winner
+// Crown last week's winner — only runs on Monday, only if the week has genuinely ended,
+// only if 2+ players were active last week, and only once per board per week.
 async function lbCheckWeeklyReset() {
   if (!LB.username || !LB.boardId) return;
+
+  const now = new Date();
+  const todayDay = now.getDay(); // 0=Sun, 1=Mon
+
+  // Only run on Monday (day 1) — that's when last week has definitively ended
+  if (todayDay !== 1) return;
+
   const lastMonday = lbGetLastMonday();
-  const weekKey = lastMonday.toISOString().slice(0,10);
+  const thisMonday = lbGetMonday(now);
+  const weekKey = lastMonday.toISOString().slice(0, 10);
+
+  // Already crowned this week? Skip.
   const alreadyCrowned = localStorage.getItem('lb_crowned_' + LB.boardId + '_' + weekKey);
   if (alreadyCrowned) return;
 
   try {
-    // Get all entries that were updated last week
-    const monday = lbGetMonday(new Date());
     const allEntries = await lbFetch();
-    if (!allEntries.length) return;
 
-    // Find winner (highest gamerscore overall — in weekly reset world this is the weekly score)
-    const winner = [...allEntries].sort((a,b) => (b.gamerscore||0) - (a.gamerscore||0))[0];
+    // Only count players who were actually active last week
+    // (updated_at falls between last Monday and this Monday)
+    const lastWeekPlayers = allEntries.filter(p => {
+      if (!p.updated_at) return false;
+      const updated = new Date(p.updated_at);
+      return updated >= lastMonday && updated < thisMonday;
+    });
+
+    // Need at least 2 players to have a meaningful champion
+    if (lastWeekPlayers.length < 2) return;
+
+    // Winner = highest gamerscore among players active last week
+    const winner = [...lastWeekPlayers].sort((a, b) => (b.gamerscore || 0) - (a.gamerscore || 0))[0];
     if (!winner || !winner.username) return;
 
-    // Save to hall of fame
+    // Write to Hall of Fame
     await sbFetch('hall_of_fame', {
       method: 'POST',
       headers: { 'Prefer': 'return=minimal' },
@@ -4555,9 +4595,11 @@ async function lbRenderWinner(entries) {
   const monday = lbGetMonday(now);
   const weekStr = monday.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
 
+  // Only show the "This Week's Leader" banner if 2+ players are active this week.
+  // Fall back to nothing rather than showing whoever joined the board most recently.
   const thisWeek = entries.filter(p => p.updated_at && new Date(p.updated_at) >= monday);
-  const pool = thisWeek.length > 0 ? thisWeek : entries;
-  const winner = [...pool].sort((a,b) => (b.gamerscore||0) - (a.gamerscore||0))[0];
+  if (thisWeek.length < 2) { el.innerHTML = ''; return; }
+  const winner = [...thisWeek].sort((a,b) => (b.gamerscore||0) - (a.gamerscore||0))[0];
   if (!winner) return;
 
   const vol = (winner.volume||0) >= 1000 ? ((winner.volume||0)/1000).toFixed(1)+'k' : (winner.volume||0);
