@@ -633,47 +633,51 @@
   }
 
   /* MOBILE */
-  /* BOTTOM TAB BAR */
-  #bottom-tab-bar {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    z-index: 300;
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-  #bottom-tab-bar { display: none; grid-template-columns: repeat(5, 1fr); }
-  .btab {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 3px; padding: 6px 4px; border: none; background: none;
-    cursor: pointer; color: var(--text3);
-    font-family: 'DM Sans', sans-serif;
-    transition: color 0.15s, transform 0.15s;
-    touch-action: manipulation; border-radius: 8px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btab:active { transform: scale(0.9); }
-  .btab.active { color: var(--accent); }
-  .btab-icon { font-size: 20px; line-height: 1; }
-  .btab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
 
   @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
-    .main { margin-left: 0; max-width: 100vw; padding: 20px 16px; padding-top: 20px; padding-bottom: 80px; }
+    .main {
+      margin-left: 0; max-width: 100vw;
+      padding: 16px 14px 24px;
+      padding-top: 60px;
+    }
     .sidebar-toggle { display: block; }
     .logo { padding-top: 56px; }
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     #stat-cards { grid-template-columns: repeat(2, 1fr); }
-    .form-row { grid-template-columns: 1fr 1fr; }
-    .page-title { font-size: 32px; }
-    #bottom-tab-bar { display: grid; }
-    /* Rest timer and achievement toast need to clear the tab bar */
-    .rest-timer { bottom: 90px; }
-    #achievement-toast { bottom: 90px; }
-    #app-toast { bottom: 90px; }
+    .form-row { grid-template-columns: 1fr; }
+    .page-title { font-size: 28px; }
+    .page-header { margin-bottom: 18px; }
+    .page-header > div:last-child { display: flex; flex-wrap: wrap; gap: 6px; }
+    /* Toasts clear the top bar */
+    .rest-timer { bottom: 24px; right: 14px; }
+    #achievement-toast { bottom: 24px; right: 14px; width: calc(100vw - 28px); }
+    #app-toast { bottom: 24px; }
+    /* Selects should never overflow */
+    select.form-select { max-width: 100%; min-width: 0; }
+    /* History filters wrap on mobile */
+    #page-history .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    #page-history .page-header > div:last-child { width: 100%; }
+    #page-history select { flex: 1; min-width: 0; }
+    /* Stats tabs wrap */
+    #page-stats > div:nth-child(2) { gap: 6px; }
+    /* Leaderboard banner stacks */
+    #lb-my-banner > div > div:nth-child(2) { flex-wrap: wrap; gap: 12px; }
+    /* Charts slightly shorter on mobile */
+    .chart-container { height: 180px; }
+    /* Cards tighter padding */
+    .card { padding: 16px 14px; }
+    /* Modal full-width on mobile */
+    .modal { padding: 20px 16px; }
+    /* Table hides less-important columns */
+    .hist-col-sets, .hist-col-vol { display: none; }
+  }
+  @media (max-width: 480px) {
+    #stat-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-value { font-size: 32px; }
+    .page-title { font-size: 26px; }
+    .grid-2 { grid-template-columns: 1fr; }
   }
 
 
@@ -891,15 +895,15 @@
       <div class="nav-item" onclick="showPage('leaderboard')">
         <span class="nav-icon">🥇</span> Leaderboard
       </div>
-      <div class="nav-item" onclick="showPage('achievements')">
-        <span class="nav-icon">🏆</span> Achievements
-        <span id="achievement-nav-badge" style="display:none;background:var(--accent);color:#0a0a0b;font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px;margin-left:auto"></span>
-      </div>
       <div class="nav-item" onclick="showPage('templates')">
         <span class="nav-icon">📋</span> Templates
       </div>
       <div class="nav-item" onclick="showPage('aipt')">
         <span class="nav-icon">🤖</span> AI PT
+      </div>
+      <div class="nav-item" onclick="showPage('achievements')">
+        <span class="nav-icon">🏆</span> Achievements
+        <span id="achievement-nav-badge" style="display:none;background:var(--accent);color:#0a0a0b;font-size:10px;font-weight:700;padding:1px 6px;border-radius:100px;margin-left:auto"></span>
       </div>
       <div class="nav-item" onclick="showPage('manage')">
         <span class="nav-icon">⚙️</span> Manage
@@ -917,7 +921,7 @@
           <div class="page-title">Dashboard</div>
           <div class="page-subtitle" id="dashboard-date"></div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="showPage('log')">+ Log Workout</button><button class="btn btn-secondary btn-sm" onclick="DB.exportAll()" title="Backup data">💾 Export</button><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Restore backup">📂 Import<input type="file" accept=".json" style="display:none" onchange="handleImport(event)"></label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn btn-primary" onclick="showPage('log')">+ Log Workout</button><div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" onclick="DB.exportAll()" title="Backup data">💾</button><label class="btn btn-secondary btn-sm" style="cursor:pointer" title="Restore backup">📂<input type="file" accept=".json" style="display:none" onchange="handleImport(event)"></label></div></div>
       </div>
 
       <div id="deload-banner-slot"></div>
@@ -1177,7 +1181,7 @@
       </div>
 
       <!-- Sub tabs -->
-      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;-ms-overflow-style:none;scrollbar-width:none">
         <button class="stats-tab active" id="stats-tab-body" onclick="statsSetTab('body')" style="padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;border:1px solid rgba(232,255,71,.3);background:rgba(232,255,71,.1);color:var(--accent);cursor:pointer">⚖️ Body</button>
         <button class="stats-tab" id="stats-tab-volume" onclick="statsSetTab('volume')" style="padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">🔥 Volume</button>
         <button class="stats-tab" id="stats-tab-progress" onclick="statsSetTab('progress')" style="padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer">📈 Progress</button>
@@ -1188,14 +1192,14 @@
         <div class="grid-2 mt-0">
           <div class="card">
             <div class="card-title">Log Weight</div>
-            <div class="form-row">
-              <div class="form-group" style="flex:1">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group">
                 <label class="form-label">Date</label>
                 <input type="date" class="form-input" id="bw-date">
               </div>
-              <div class="form-group" style="flex:1">
+              <div class="form-group">
                 <label class="form-label">Weight (kg)</label>
-                <input type="number" class="form-input" id="bw-weight" placeholder="e.g. 80.5" step="0.1" min="0">
+                <input type="number" class="form-input" id="bw-weight" placeholder="e.g. 80.5" step="0.1" min="0" inputmode="decimal">
               </div>
             </div>
             <button class="btn btn-primary" style="width:100%" onclick="bwSave()">Save Weight</button>
@@ -1336,7 +1340,7 @@
         <div id="lb-winner-card" style="margin-bottom:20px"></div>
 
         <!-- Tabs -->
-        <div class="tab-bar" style="margin-bottom:20px">
+        <div class="tab-bar" style="margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:4px">
           <button class="tab-btn active" id="lb-tab-gs" onclick="lbSetTab('gs')"><span class="tab-icon">🏆</span><span class="tab-lbl">Score</span></button>
           <button class="tab-btn" id="lb-tab-vol" onclick="lbSetTab('vol')"><span class="tab-icon">🔥</span><span class="tab-lbl">Volume</span></button>
           <button class="tab-btn" id="lb-tab-sess" onclick="lbSetTab('sess')"><span class="tab-icon">📅</span><span class="tab-lbl">Gym Days</span></button>
@@ -1904,10 +1908,7 @@ function showPage(name) {
     const onclick = n.getAttribute('onclick') || '';
     n.classList.toggle('active', onclick.includes("'" + name + "'"));
   });
-  // Sync bottom tab bar
-  document.querySelectorAll('.btab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.page === name);
-  });
+
   document.getElementById('sidebar')?.classList.remove('open');
   const ov = document.getElementById('sidebar-overlay'); if(ov) ov.style.display='none';
   if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
@@ -2219,11 +2220,11 @@ function addSetRow(weight='', reps='') {
     <div class="set-row-num">${idx}</div>
     <div class="set-input-wrap">
       <span class="set-input-label">kg</span>
-      <input type="number" class="form-input set-weight" placeholder="0" value="${weight}" min="0" step="0.5" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+      <input type="number" inputmode="decimal" class="form-input set-weight" placeholder="0" value="${weight}" min="0" step="0.5" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
     </div>
     <div class="set-input-wrap">
       <span class="set-input-label">reps</span>
-      <input type="number" class="form-input set-reps" placeholder="0" value="${reps}" min="0" step="1" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+      <input type="number" inputmode="numeric" class="form-input set-reps" placeholder="0" value="${reps}" min="0" step="1" oninput="_debouncedCheckProgress()" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
     </div>
     <button onclick="this.closest('.set-row').remove();renumberSets()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px;line-height:1;touch-action:manipulation">✕</button>
   `;
@@ -2696,9 +2697,9 @@ function renderHistoryPage(el) {
     return `<tr>
       <td style="font-family:'DM Mono',monospace;font-size:13px">${formatDate(w.date)}</td>
       <td><strong>${ex ? ex.name : 'Unknown'}</strong></td>
-      <td>${w.sets.map(s => `<span class="set-chip">${s.weight}×${s.reps}</span>`).join(' ')}</td>
+      <td class="hist-col-sets">${w.sets.map(s => `<span class="set-chip">${s.weight}×${s.reps}</span>`).join(' ')}</td>
       <td style="font-family:'DM Mono',monospace">${maxW}kg</td>
-      <td style="font-family:'DM Mono',monospace">${vol}kg</td>
+      <td class="hist-col-vol" style="font-family:'DM Mono',monospace">${vol}kg</td>
       <td>${w.note?`<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:4px 10px" onclick="viewNote(this.dataset.note)" data-note="${w.note.replace(/"/g,'&quot;')}">&#x1F4AC;</button>`:''}</td>
       <td>
         <div class="row-actions">
@@ -2719,7 +2720,7 @@ function renderHistoryPage(el) {
     </div>` : '';
 
   el.innerHTML = `<div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Exercise</th><th>Sets</th><th>Max Weight</th><th>Volume</th><th>Note</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Exercise</th><th class="hist-col-sets">Sets</th><th>Max</th><th class="hist-col-vol">Volume</th><th>Note</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>${pagination}`;
 }
@@ -2812,8 +2813,8 @@ function editWorkoutAddSet(weight = '', reps = '') {
   div.style.cssText = 'display:grid;grid-template-columns:40px 1fr 1fr 36px;gap:8px;align-items:center;margin-bottom:8px';
   div.innerHTML = `
     <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);text-align:center">${idx}</div>
-    <input type="number" class="form-input ew-weight" placeholder="kg" value="${weight}" min="0" step="0.5">
-    <input type="number" class="form-input ew-reps" placeholder="Reps" value="${reps}" min="0" step="1">
+    <input type="number" inputmode="decimal" class="form-input ew-weight" placeholder="kg" value="${weight}" min="0" step="0.5">
+    <input type="number" inputmode="numeric" class="form-input ew-reps" placeholder="Reps" value="${reps}" min="0" step="1">
     <button onclick="this.parentElement.remove();ewRenumber()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px">✕</button>
   `;
   container.appendChild(div);
@@ -3371,9 +3372,10 @@ function renderQuickLog() {
   btns.innerHTML = recent.map(ex => {
     const sp = getSplitByName(ex.category);
     return `<button onclick="quickLogEx('${ex.id}')"
-      style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;
+      style="display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:8px;
              border:1px solid var(--border);background:var(--surface2);color:var(--text);
              cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;
+             flex:1;min-width:140px;
              transition:all 0.15s;touch-action:manipulation"
       onmouseover="this.style.borderColor='${sp.color}';this.style.background='${sp.color}18'"
       onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'">
@@ -3628,12 +3630,18 @@ function guidedRender() {
 function guidedAddSetRow(num, weight, reps) {
   const container = document.getElementById('guided-sets-container');
   const div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:32px 1fr 1fr 36px;gap:8px;align-items:center;margin-bottom:8px';
+  div.className = 'set-row';
   div.innerHTML = `
-    <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--text2);text-align:center">${num}</div>
-    <input type="number" class="form-input guided-weight" placeholder="kg (optional)" value="${weight}" min="0" step="0.5">
-    <input type="number" class="form-input guided-reps" placeholder="Reps" value="${reps}" min="0" step="1">
-    <button onclick="this.parentElement.remove();guidedRenumber()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px">✕</button>`;
+    <div class="set-row-num">${num}</div>
+    <div class="set-input-wrap">
+      <span class="set-input-label">kg</span>
+      <input type="number" inputmode="decimal" class="form-input guided-weight" placeholder="0" value="${weight}" min="0" step="0.5" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+    </div>
+    <div class="set-input-wrap">
+      <span class="set-input-label">reps</span>
+      <input type="number" inputmode="numeric" class="form-input guided-reps" placeholder="0" value="${reps}" min="0" step="1" style="padding-top:14px;font-size:15px;font-family:'DM Mono',monospace;font-weight:600">
+    </div>
+    <button onclick="this.closest('.set-row').remove();guidedRenumber()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;padding:4px;line-height:1;touch-action:manipulation">✕</button>`;
   container.appendChild(div);
 }
 
@@ -3643,15 +3651,15 @@ function guidedAddSet() {
 }
 
 function guidedRenumber() {
-  document.querySelectorAll('#guided-sets-container > div').forEach((row, i) => {
-    const num = row.querySelector('div');
+  document.querySelectorAll('#guided-sets-container .set-row').forEach((row, i) => {
+    const num = row.querySelector('.set-row-num');
     if (num) num.textContent = i + 1;
   });
 }
 
 function guidedSaveCurrent() {
   const rows = document.querySelectorAll('#guided-sets-container > div');
-  _guidedSets[_guidedIdx] = [...rows].map(row => {
+  _guidedSets[_guidedIdx] = [...document.querySelectorAll('#guided-sets-container .set-row')].map(row => {
     const wVal = row.querySelector('.guided-weight').value;
     return {
       weight: wVal === '' ? 0 : (parseFloat(wVal) || 0),
@@ -5863,30 +5871,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-
-<!-- MOBILE BOTTOM TAB BAR -->
-<nav id="bottom-tab-bar">
-  <button class="btab" onclick="showPage('dashboard')" data-page="dashboard">
-    <span class="btab-icon">📊</span>
-    <span class="btab-label">Home</span>
-  </button>
-  <button class="btab" onclick="showPage('log')" data-page="log">
-    <span class="btab-icon">➕</span>
-    <span class="btab-label">Log</span>
-  </button>
-  <button class="btab" onclick="showPage('leaderboard')" data-page="leaderboard">
-    <span class="btab-icon">🥇</span>
-    <span class="btab-label">Board</span>
-  </button>
-  <button class="btab" onclick="showPage('templates')" data-page="templates">
-    <span class="btab-icon">📋</span>
-    <span class="btab-label">Templates</span>
-  </button>
-  <button class="btab" onclick="toggleSidebar()" id="btab-more">
-    <span class="btab-icon">☰</span>
-    <span class="btab-label">More</span>
-  </button>
-</nav>
 
 <!-- ACHIEVEMENT TOAST -->
 <!-- IN-APP TOAST -->
